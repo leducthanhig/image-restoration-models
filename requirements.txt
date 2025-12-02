@@ -1,0 +1,13 @@
+torch>=1.0.1
+torchvision
+torchsummary
+timm
+numpy
+albumentations>=1.0.0
+scikit-image>=0.18.1
+opencv-python-headless
+einops
+mamba_ssm
+lmdb
+pyyaml
+tqdm
