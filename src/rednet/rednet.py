@@ -132,4 +132,5 @@ class REDNet(nn.Module):
         # deconv15 (final layer, no ReLU)
         d15 = self.deconv15(d14)
 
-        return d15
+        # final skip connection with input
+        return d15 + x
