@@ -11,3 +11,4 @@ mamba_ssm
 lmdb
 pyyaml
 tqdm
+pandas
