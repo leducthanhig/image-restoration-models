@@ -12,7 +12,10 @@ class Predictor:
     def __init__(self, weights_path: str, model_name: str = '', device: torch.device = torch.device('cuda')):
         with open('deblurganv2/config/config.yaml',encoding='utf-8') as cfg:
             config = yaml.load(cfg, Loader=yaml.FullLoader)
-        model = get_generator(model_name or config['model'])
+        # Override model name if specified
+        if model_name:
+            config['model']['g_name'] = model_name
+        model = get_generator(config['model'])
         model.load_state_dict(torch.load(weights_path)['model'])
         self.model = model.to(device)
         self.model.train(True)
@@ -54,7 +57,7 @@ class Predictor:
         x = (np.transpose(x, (1, 2, 0)) + 1) / 2.0 * 255.0
         return x.astype('uint8')
 
-    def __call__(self, img: np.ndarray, mask: Optional[np.ndarray], ignore_mask=True) -> np.ndarray:
+    def __call__(self, img: np.ndarray, mask: Optional[np.ndarray] = None, ignore_mask=True) -> np.ndarray:
         (img, mask), h, w = self._preprocess(img, mask)
         with torch.no_grad():
             inputs = [img.cuda()]
