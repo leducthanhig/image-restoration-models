@@ -48,8 +48,7 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
     length = len(target_files)
 
     def gen():
-        # for i in range(length):
-        for i in range(3):
+        for i in range(length):
             inputC_file = inputC_files[i]
             inputL_file = inputL_files[i]
             inputR_file = inputR_files[i]
@@ -66,8 +65,6 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
                 input_img = load_img(inputC_file)
                 target_img = load_img(target_file)
 
-            input_img.resize((128, 128, input_img.shape[2])) # resize for faster testing
-            target_img.resize((128, 128, target_img.shape[2])) # resize for faster testing
             yield input_img, target_img, indoor_label, outdoor_label
 
     return DataLoader(gen, length)
@@ -84,15 +81,12 @@ def motion_blur_dataset_loader(name: Literal['GoPro', 'HIDE', 'RealBlur_J', 'Rea
     length = len(target_files)
 
     def gen():
-        # for i in range(length):
-        for i in range(3):
+        for i in range(length):
             input_file = input_files[i]
             target_file = target_files[i]
             input_img = load_img(input_file)
             target_img = load_img(target_file)
 
-            input_img.resize((128, 128, input_img.shape[2])) # resize for faster testing
-            target_img.resize((128, 128, target_img.shape[2])) # resize for faster testing
             yield input_img, target_img
 
     return DataLoader(gen, length)
@@ -105,16 +99,13 @@ def gaussian_noise_dataset_loader(name: Literal['Set12', 'BSD68', 'CBSD68', 'Kod
     length = len(files)
 
     def gen():
-        for file in files[:3]:
+        for file in files:
             if n_channels == 1:
                 img = load_gray_img(file)
             else:
                 img = load_img(file)
             noisy_img = add_gaussian_noise(img, sigma=sigma)
 
-            noisy_img.resize((128, 128, noisy_img.shape[2])) # resize for faster testing
-            img = img.copy()
-            img.resize((128, 128, img.shape[2])) # resize for faster testing
             yield noisy_img, img
 
     return DataLoader(gen, length)
@@ -139,10 +130,8 @@ def real_noise_dataset_loader(name='SIDD'):
         length = N * M
 
         def gen():
-            # for i in range(N):
-            for i in range(1):
-                # for j in range(M):
-                for j in range(3):
+            for i in range(N):
+                for j in range(M):
                     yield noisy_images[i, j], gt_images[i, j]
 
     return DataLoader(gen, length)
