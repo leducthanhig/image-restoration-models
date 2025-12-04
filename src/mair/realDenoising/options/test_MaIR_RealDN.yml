@@ -35,7 +35,7 @@ network_g:
   dynamic_ids: False
 
 path:
-  pretrain_network_g: ../weights/MaIR/denoising/MaIR_RealDN.pth
+  pretrain_network_g: weights/MaIR/denoising/MaIR_RealDN.pth
   strict_load_g: true
 
 # validation settings

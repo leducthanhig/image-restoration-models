@@ -10,7 +10,7 @@ from .models.networks import get_generator
 
 class Predictor:
     def __init__(self, weights_path: str, model_name: str = '', device: torch.device = torch.device('cuda')):
-        with open('deblurganv2/config/config.yaml',encoding='utf-8') as cfg:
+        with open('src/deblurganv2/config/config.yaml',encoding='utf-8') as cfg:
             config = yaml.load(cfg, Loader=yaml.FullLoader)
         # Override model name if specified
         if model_name:

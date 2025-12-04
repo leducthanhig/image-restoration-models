@@ -1,5 +1,9 @@
 __pycache__
 tmp
-data
-weights
+results
+test
 *.csv
+*.tar
+*.pth
+*.pt
+*.h5

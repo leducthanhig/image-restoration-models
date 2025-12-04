@@ -70,7 +70,7 @@ network_g:
 
 # path
 path:
-  pretrain_network_g: ../weights/Restormer/denoising/gaussian_gray_denoising_sigma50.pth
+  pretrain_network_g: weights/Restormer/denoising/gaussian_gray_denoising_sigma50.pth
   strict_load_g: true
   resume_state: ~
 

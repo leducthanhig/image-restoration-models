@@ -14,7 +14,7 @@ from mair.realDenoising.basicsr.models import create_model
 from mair.realDenoising.basicsr.models.image_restoration_model import ImageCleanModel
 
 
-def read_opt(opt_path: str, root_path: str):
+def read_opt(opt_path: str):
     # parse yml to dict
     with open(opt_path, mode='r') as f:
         opt = yaml.load(f, Loader=ordered_yaml()[0])
@@ -56,17 +56,12 @@ def read_opt(opt_path: str, root_path: str):
         if (val is not None) and ('resume_state' in key or 'pretrain_network' in key):
             opt['path'][key] = osp.expanduser(val)
 
-    results_root = osp.join(root_path, 'results', opt['name'])
-    opt['path']['results_root'] = results_root
-    opt['path']['log'] = results_root
-    opt['path']['visualization'] = osp.join(results_root, 'visualization')
-
     return opt
 
 
-def get_model(opt_path: str, root_path: str):
+def get_model(opt_path: str):
     # parse options, set distributed setting, set ramdom seed
-    opt = read_opt(opt_path, root_path)
+    opt = read_opt(opt_path)
     # create model
     if opt['model_type'] == 'ImageCleanModel':
         model: ImageCleanModel = create_model(opt)

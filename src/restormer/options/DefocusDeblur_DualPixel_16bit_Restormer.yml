@@ -67,7 +67,7 @@ network_g:
 
 # path
 path:
-  pretrain_network_g: ../weights/Restormer/deblurring/dual_pixel_defocus_deblurring.pth
+  pretrain_network_g: weights/Restormer/deblurring/dual_pixel_defocus_deblurring.pth
   strict_load_g: true
   resume_state: ~
 

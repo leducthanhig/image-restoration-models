@@ -6,8 +6,8 @@ import numpy as np
 import scipy.io as sio
 from natsort import natsorted
 
-from utils import load_img, load_img16, load_gray_img, add_gaussian_noise
-
+from utils import imread_uint8, imread_uint16
+from configs import ROOT_DATASET_DIR
 
 class DataLoader:
     """Wrap a generator factory with a __len__ so it can be used by progress bars.
@@ -31,7 +31,7 @@ class DataLoader:
 
 
 def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
-    dir_path = os.path.join('..', 'data', 'deblurring', 'defocus', name)
+    dir_path = os.path.join(ROOT_DATASET_DIR, 'deblurring', 'defocus', 'test', name)
     inputC_dir = os.path.join(dir_path, 'inputC')
     inputL_dir = os.path.join(dir_path, 'inputL')
     inputR_dir = os.path.join(dir_path, 'inputR')
@@ -57,13 +57,13 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
             outdoor_label = outdoor_labels[i]
 
             if dual_pixel:
-                inputL_img = load_img16(inputL_file)
-                inputR_img = load_img16(inputR_file)
+                inputL_img = imread_uint16(inputL_file)
+                inputR_img = imread_uint16(inputR_file)
                 input_img = np.concatenate([inputL_img, inputR_img], axis=2)
-                target_img = load_img16(target_file)
+                target_img = imread_uint16(target_file)
             else:
-                input_img = load_img(inputC_file)
-                target_img = load_img(target_file)
+                input_img = imread_uint8(inputC_file)
+                target_img = imread_uint8(target_file)
 
             yield input_img, target_img, indoor_label, outdoor_label
 
@@ -71,7 +71,7 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
 
 
 def motion_blur_dataset_loader(name: Literal['GoPro', 'HIDE', 'RealBlur_J', 'RealBlur_R'] = 'GoPro'):
-    dir_path = os.path.join('..', 'data', 'deblurring', 'motion', name)
+    dir_path = os.path.join(ROOT_DATASET_DIR, 'deblurring', 'motion', 'test', name)
     input_dir = os.path.join(dir_path, 'input')
     target_dir = os.path.join(dir_path, 'target')
 
@@ -84,8 +84,8 @@ def motion_blur_dataset_loader(name: Literal['GoPro', 'HIDE', 'RealBlur_J', 'Rea
         for i in range(length):
             input_file = input_files[i]
             target_file = target_files[i]
-            input_img = load_img(input_file)
-            target_img = load_img(target_file)
+            input_img = imread_uint8(input_file)
+            target_img = imread_uint8(target_file)
 
             yield input_img, target_img
 
@@ -93,30 +93,25 @@ def motion_blur_dataset_loader(name: Literal['GoPro', 'HIDE', 'RealBlur_J', 'Rea
 
 
 def gaussian_noise_dataset_loader(name: Literal['Set12', 'BSD68', 'CBSD68', 'Kodak', 'McMaster', 'Urban100'] = 'BSD68', sigma=15, n_channels=1):
-    dir_path = os.path.join('..', 'data', 'denoising', 'gaussian', name)
+    dir_path = os.path.join(ROOT_DATASET_DIR, 'denoising', 'gaussian', 'test', name)
     files = natsorted(glob(os.path.join(dir_path, '*.*')))
 
     length = len(files)
 
     def gen():
         for file in files:
-            if n_channels == 1:
-                img = load_gray_img(file)
-            else:
-                img = load_img(file)
-            noisy_img = add_gaussian_noise(img, sigma=sigma)
-
-            yield noisy_img, img
+            img = imread_uint8(file, n_channels=n_channels)
+            yield img
 
     return DataLoader(gen, length)
 
 
 def real_noise_dataset_loader(name='SIDD'):
-    dir_path = os.path.join('..', 'data', 'denoising', 'real', name)
+    dir_path = os.path.join(ROOT_DATASET_DIR, 'denoising', 'real', 'test', name)
     noisy_mat = sio.loadmat(os.path.join(dir_path, 'ValidationNoisyBlocksSrgb.mat'))
-    noisy_images = np.asarray(noisy_mat['ValidationNoisyBlocksSrgb'], dtype=np.float32) / 255.
+    noisy_images = np.asarray(noisy_mat['ValidationNoisyBlocksSrgb'], dtype=np.uint8)
     gt_mat = sio.loadmat(os.path.join(dir_path, 'ValidationGtBlocksSrgb.mat'))
-    gt_images = np.asarray(gt_mat['ValidationGtBlocksSrgb'], dtype=np.float32) / 255.
+    gt_images = np.asarray(gt_mat['ValidationGtBlocksSrgb'], dtype=np.uint8)
 
     # handle both (N, H, W, C) and (N, M, H, W, C) shapes from SIDD
     if noisy_images.ndim == 4:
@@ -124,7 +119,9 @@ def real_noise_dataset_loader(name='SIDD'):
 
         def gen():
             for i in range(length):
-                yield noisy_images[i], gt_images[i]
+                noisy_image = noisy_images[i, ...]
+                gt_image = gt_images[i, ...]
+                yield noisy_image, gt_image
     else:
         N, M = noisy_images.shape[0], noisy_images.shape[1]
         length = N * M
@@ -132,6 +129,8 @@ def real_noise_dataset_loader(name='SIDD'):
         def gen():
             for i in range(N):
                 for j in range(M):
-                    yield noisy_images[i, j], gt_images[i, j]
+                    noisy_image = noisy_images[i, j, ...]
+                    gt_image = gt_images[i, j, ...]
+                    yield noisy_image, gt_image
 
     return DataLoader(gen, length)
