@@ -36,7 +36,7 @@ make download-datasets
 # Run Tests
 
 ```bash
-python src/tests.py
+python scripts/tests.py
 ```
 
 # Test Configurations

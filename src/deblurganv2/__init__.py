@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 import numpy as np
@@ -68,7 +69,8 @@ class Predictor:
 
 
 def get_model(weights_path: str, device: torch.device):
-    model = Predictor(weights_path=weights_path, device=device)
+    model_name = os.path.basename(weights_path).split('.')[0]
+    model = Predictor(weights_path=weights_path, model_name=model_name, device=device)
 
     print(f"Successfully loaded {np.sum([p.numel() for p in model.model.parameters()]):,} parameters from {weights_path}")
     return model
