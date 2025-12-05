@@ -1,3 +1,8 @@
+install-packages:
+	pip install -r requirements.txt \
+		torch==2.7 torchvision --extra-index-url https://download.pytorch.org/whl/cu126 \
+		https://github.com/state-spaces/mamba/releases/download/v2.2.5/mamba_ssm-2.2.5+cu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
+
 download-datasets:
 	wget 'https://drive.usercontent.google.com/download?id=1dDWUQ_D93XGtcywoUcZE1HOXCV4EuLyw&export=download&confirm=t' -O test.zip
 	unzip test.zip -d datasets/deblurring/defocus

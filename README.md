@@ -16,8 +16,18 @@ This repository contains implementations and pre-trained models for various imag
 ## Installation
 
 ```bash
-pip install -r requirements.txt
+make install-packages
 ```
+
+Or manually install the required packages:
+
+```bash
+pip install -r requirements.txt \
+    torch==2.7 torchvision --extra-index-url https://download.pytorch.org/whl/cu126 \
+    https://github.com/state-spaces/mamba/releases/download/v2.2.5/mamba_ssm-2.2.5+cu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
+```
+
+Note: The torch version should match mamba's supported versions. Adjust the CUDA version as needed. Find the pre-built wheels for mamba [here](https://github.com/state-spaces/mamba/releases).
 
 ## Download Pre-trained Weights
 
