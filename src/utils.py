@@ -57,9 +57,8 @@ def find_max_patch_size(
     model: torch.nn.Module | Predictor,
     device: torch.device,
     channels: int = 3,
-    max_side: int = 1024,
+    max_side: int = 2048,
     step: int = 16,
-    dtype=torch.float32,
 ):
     """
     Heuristically find the maximum square patch size that a model (PyTorch nn.Module)
@@ -68,7 +67,7 @@ def find_max_patch_size(
     - step: quantization step for result (e.g., 16).
     Returns an int patch_size (<= max_side).
     """
-    if not torch.cuda.is_available() or not isinstance(model, torch.nn.Module):
+    if not torch.cuda.is_available():
         return None
 
     # Limit candidates to max_side
@@ -78,11 +77,10 @@ def find_max_patch_size(
     @torch.no_grad()
     def try_forward(sz):
         torch.cuda.empty_cache()
-        model.eval()
         # small dummy input
-        x = torch.zeros((1, channels, sz, sz), dtype=dtype, device=device)
+        x = np.random.randint(0, 255, (sz, sz, channels), dtype=np.uint8)
         try:
-            _ = model(x)
+            _ = run_model_inference(model, x, device)
             # synchronize to catch async OOMs
             torch.cuda.synchronize()
             return True
@@ -101,9 +99,10 @@ def find_max_patch_size(
             mid = step
         try:
             ok = try_forward(mid)
-        except Exception:
+        except Exception as e:
             # if model raises other exceptions (e.g. wrong input shape), stop trying.
-            break
+            print(f"Exception during try_forward with size {mid}: {e}")
+            return None
         if ok:
             best = mid
             lo = mid + step

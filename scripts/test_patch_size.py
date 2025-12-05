@@ -30,10 +30,10 @@ if __name__ == '__main__':
     print(f"DnCNN 3: {find_max_patch_size(model, device=device, channels=3)}")
     del model
 
-    model = deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_mobilenet.h5', device=device).model
+    model = deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_mobilenet.h5', device=device)
     print(f"DeblurGANv2 fpn_mobilenet: {find_max_patch_size(model, device=device, channels=3)}")
     del model
-    model = deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_inception.h5', device=device).model
+    model = deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_inception.h5', device=device)
     print(f"DeblurGANv2 fpn_inception: {find_max_patch_size(model, device=device, channels=3)}")
     del model
 
