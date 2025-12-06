@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Callable
 
 import cv2
 import numpy as np
@@ -8,19 +9,11 @@ from torch.nn import Module
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 
-from deblurganv2 import Predictor
-from restormer import Restormer
-from mair.realDenoising.basicsr.models.archs.mairunet_arch import MaIRUNet
 from configs import ROOT_RESULTS_DIR
 
 
-def get_model_total_parameters(model: Module | Predictor) -> int:
-    if isinstance(model, Predictor):
-        # DeblurGANv2 Predictor
-        return sum(p.numel() for p in model.model.parameters())
-    else:
-        # Standard PyTorch model
-        return sum(p.numel() for p in model.parameters())
+def get_model_total_parameters(model: Module) -> int:
+    return sum(p.numel() for p in model.parameters())
 
 
 def add_gaussian_noise(img: np.ndarray, sigma: int | float = 15):
@@ -55,7 +48,7 @@ def imwrite_uint(file_path: str, img: np.ndarray):
 
 
 def find_max_patch_size(
-    model: torch.nn.Module | Predictor,
+    model: torch.nn.Module,
     device: torch.device,
     channels: int = 3,
     max_side: int = 2048,
@@ -153,14 +146,75 @@ def calculate_metrics(pred: np.ndarray, target: np.ndarray, data_range: int | fl
     return psnr_value, ssim_value
 
 
+def normalize(img: np.ndarray):
+    if img.dtype == np.uint8:
+        img_normed = img.astype(np.float32) / 255.0
+    elif img.dtype == np.uint16:
+        img_normed = img.astype(np.float32) / 65535.0
+
+    return img_normed.astype(np.float32)
+
+
+def pad(x: torch.Tensor, downscale_factor: int = 8):
+    h, w = x.shape[-2:]
+    H = ((h+downscale_factor)//downscale_factor)*downscale_factor
+    W = ((w+downscale_factor)//downscale_factor)*downscale_factor
+    padh = H-h if h%downscale_factor!=0 else 0
+    padw = W-w if w%downscale_factor!=0 else 0
+    x = torch.nn.functional.pad(x, (0, padw, 0, padh), 'reflect')
+    return x
+
+
+def get_gaussian_weights(height, width, n_channels=3, sigma_scale=0.125):
+    """
+    Generates a 2D Gaussian mask.
+
+    Args:
+        height, width: Dimensions of the patch.
+        n_channels: Number of channels (usually 3).
+        sigma_scale: Controls the 'spread' of the bell curve.
+                     Lower = sharper peak (uses only strict center).
+                     Higher = flatter (averages more of the edge).
+                     0.125 is a standard starting point for 50% overlap.
+    """
+    # 1. Create a grid of coordinates
+    y_coords = np.arange(height)
+    x_coords = np.arange(width)
+    y_grid, x_grid = np.meshgrid(y_coords, x_coords, indexing='ij')
+
+    # 2. Calculate center coordinates
+    center_y = height / 2.0
+    center_x = width / 2.0
+
+    # 3. Calculate Variance (Sigma^2) based on patch size
+    # We scale sigma relative to the patch size so it works for 64x64 or 512x512
+    sigma_y = height * sigma_scale
+    sigma_x = width * sigma_scale
+
+    # 4. The 2D Gaussian Formula
+    # g(x,y) = exp( - ( (x-cx)^2/2sx^2 + (y-cy)^2/2sy^2 ) )
+    gaussian = np.exp(
+        -((y_grid - center_y)**2 / (2 * sigma_y**2) +
+          (x_grid - center_x)**2 / (2 * sigma_x**2))
+    )
+
+    # 5. Expand to match image channels (H, W, C)
+    gaussian = np.repeat(gaussian[:, :, np.newaxis], n_channels, axis=2)
+
+    return gaussian.astype(np.float32)
+
+
 def run_model_inference(
-    model: Module | Predictor,
+    model: Module,
     input_img: np.ndarray,
     device: torch.device,
+    normalize: Callable[[np.ndarray], np.ndarray] = normalize,
     patch_size: int | None = None,
     patch_overlap: int = 32,
     need_degradation=False,
     noise_level: int | float | None = None,
+    pad: Callable[[torch.Tensor], torch.Tensor] | None = None,
+    postprocess: Callable[[torch.Tensor], np.ndarray] | None = None,
 ):
     """Run inference based on model type. Returns (prediction, inference_time_ms)."""
     start_time = time.time()
@@ -174,7 +228,12 @@ def run_model_inference(
                 pass
             torch.cuda.empty_cache()
 
-        h, w = input_img.shape[:2]
+        # Normalize
+        img_normed = normalize(input_img)
+
+        # Process in patches if required
+        # Modified from: https://github.com/cszn/KAIR/blob/fc1732f4a4514e42ce15e5b3a1e18c828af47a1e/main_test_swinir.py#L262-L282
+        h, w = img_normed.shape[:2]
         if patch_size:
             patch_size = min(patch_size, h, w)
             stride = patch_size - patch_overlap
@@ -185,52 +244,48 @@ def run_model_inference(
             h_idx_list = [0]
             w_idx_list = [0]
 
-        output_img = np.zeros(shape=(h, w, min(3, input_img.shape[2])), dtype=input_img.dtype)
+        output_img = np.zeros(shape=(h, w, min(3, img_normed.shape[2])), dtype=np.float32)
+        weight_map = np.zeros(shape=(h, w, min(3, img_normed.shape[2])), dtype=np.float32)
+
+        # Pre-calculate the window mask once
+        window_mask = get_gaussian_weights(patch_size, patch_size, min(3, img_normed.shape[2]))
+
         for h_idx in h_idx_list:
             for w_idx in w_idx_list:
-                input_patch = input_img[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :]
+                input_patch = img_normed[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :].copy()
 
-                if isinstance(model, Predictor):
-                    # DeblurGANv2 uses its own Predictor class. It returns uint8 [0,255]
-                    pred: np.ndarray = model(input_patch)
+                # Add noise if required
+                if need_degradation and noise_level is not None:
+                    input_patch = add_gaussian_noise(input_patch, noise_level)
+
+                # Convert to tensor: (H, W, C) -> (1, C, H, W)
+                input_tensor = torch.from_numpy(input_patch.transpose(2, 0, 1)).unsqueeze(0).to(device)
+
+                if pad is not None:
+                    h, w = input_tensor.shape[-2:]
+                    input_tensor = pad(input_tensor)
+                    output_tensor: torch.Tensor = model(input_tensor)[:, :, :h, :w]
                 else:
-                    # Standard PyTorch models
+                    output_tensor: torch.Tensor = model(input_tensor)
 
-                    # Normalize to [0,1]
-                    if input_patch.dtype == np.uint8:
-                        img_normed = input_patch.astype(np.float32) / 255.0
-                    elif input_patch.dtype == np.uint16:
-                        img_normed = input_patch.astype(np.float32) / 65535.0
+                if postprocess is not None:
+                    output_tensor = postprocess(output_tensor)
 
-                    # Add noise if required
-                    if need_degradation and noise_level is not None:
-                        img_normed = add_gaussian_noise(img_normed, noise_level)
+                # Convert back to numpy: (1, C, H, W) -> (H, W, C)
+                pred = output_tensor.squeeze(0).cpu().numpy().transpose(1, 2, 0)
 
-                    # Convert to tensor: (H, W, C) -> (1, C, H, W)
-                    input_tensor = torch.from_numpy(img_normed.transpose(2, 0, 1)).unsqueeze(0).to(device)
+                # Accumulate output and weights with weights
+                output_img[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :] += pred * window_mask
+                weight_map[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :] += window_mask
 
-                    if isinstance(model, Restormer) or isinstance(model, MaIRUNet):
-                        # Padding in case images are not multiples of 8
-                        h,w = input_tensor.shape[2], input_tensor.shape[3]
-                        factor = 8
-                        H,W = ((h+factor)//factor)*factor, ((w+factor)//factor)*factor
-                        padh = H-h if h%factor!=0 else 0
-                        padw = W-w if w%factor!=0 else 0
-                        input_tensor = torch.nn.functional.pad(input_tensor, (0,padw,0,padh), 'reflect')
-                        output_tensor: torch.Tensor = model(input_tensor)[:, :, :h, :w]
-                    else:
-                        output_tensor: torch.Tensor = model(input_tensor)
+        # Average overlapping regions with weights
+        output_img /= np.maximum(weight_map, 1e-8)
 
-                    # Convert back to numpy: (1, C, H, W) -> (H, W, C)
-                    pred = output_tensor.squeeze(0).cpu().numpy().transpose(1, 2, 0)
-
-                    # Rescale to uint
-                    if input_patch.dtype == np.uint8:
-                        pred = np.clip(pred * 255.0, 0, 255).round().astype(np.uint8)
-                    elif input_patch.dtype == np.uint16:
-                        pred = np.clip(pred * 65535.0, 0, 65535).round().astype(np.uint16)
-
-                output_img[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :] = pred
+        # Convert back to original dtype
+        if input_img.dtype == np.uint8:
+            output_img = np.clip(output_img * 255.0, 0, 255).round().astype(np.uint8)
+        elif input_img.dtype == np.uint16:
+            output_img = np.clip(output_img * 65535.0, 0, 65535).round().astype(np.uint16)
 
     inference_time_ms = (time.time() - start_time) * 1000
     return output_img, inference_time_ms

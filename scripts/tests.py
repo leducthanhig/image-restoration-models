@@ -15,6 +15,7 @@ import mair
 import rednet
 import restormer
 from utils import (get_model_total_parameters,
+                   pad,
                    run_model_inference,
                    calculate_metrics,
                    save_result_image)
@@ -38,7 +39,7 @@ def test_gaussian_denoising_gray_nonblind(
             print(f"\n{'='*80}")
             print(f"Testing Gaussian Denoising (Gray, Non-blind) - {dataset_name}, sigma={sigma}")
             print(f"{'='*80}")
-            test_name = 'Gaussian_Denoising_Gray'
+            test_name = 'Gaussian_Denoising_Gray_Nonblind'
 
             # Load dataset
             loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=1)
@@ -52,7 +53,12 @@ def test_gaussian_denoising_gray_nonblind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="REDNet"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['REDNet'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['REDNet'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -83,7 +89,12 @@ def test_gaussian_denoising_gray_nonblind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="DnCNN"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['DnCNN'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['DnCNN'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -114,7 +125,13 @@ def test_gaussian_denoising_gray_nonblind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="Restormer"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['Restormer'],
+                                                               pad=pad)
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -163,7 +180,12 @@ def test_gaussian_denoising_gray_blind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="DnCNN Blind"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['DnCNN'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['DnCNN'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -193,7 +215,13 @@ def test_gaussian_denoising_gray_blind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="Restormer Blind"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['Restormer'],
+                                                               pad=pad)
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -243,7 +271,13 @@ def test_gaussian_denoising_color_nonblind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="Restormer"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['Restormer'],
+                                                               pad=pad)
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -274,7 +308,13 @@ def test_gaussian_denoising_color_nonblind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="MaIR"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['MaIR'][0])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['MaIR'][0],
+                                                               pad=pad)
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -322,7 +362,12 @@ def test_gaussian_denoising_color_blind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="DnCNN Blind"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['DnCNN'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['DnCNN'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -352,7 +397,13 @@ def test_gaussian_denoising_color_blind(
 
                 psnr_list, ssim_list, time_list = [], [], []
                 for clean_img, img_name in tqdm(loader, desc="Restormer Blind"):
-                    pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
+                    pred, inference_time = run_model_inference(model,
+                                                               clean_img,
+                                                               device,
+                                                               need_degradation=True,
+                                                               noise_level=sigma,
+                                                               patch_size=PATCH_SIZE['Restormer'],
+                                                               pad=pad)
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
@@ -397,7 +448,7 @@ def test_real_noise_denoising(models: list[Literal['Restormer', 'MaIR']] = ['Res
         psnr_list, ssim_list, time_list = [], [], []
         img_idx = 0
         for noisy_img, clean_img in tqdm(loader, desc="Restormer"):
-            pred, inference_time = run_model_inference(model, noisy_img, device, patch_size=PATCH_SIZE['Restormer'])
+            pred, inference_time = run_model_inference(model, noisy_img, device, patch_size=PATCH_SIZE['Restormer'], pad=pad)
             p, s = calculate_metrics(pred, clean_img)
             psnr_list.append(p)
             ssim_list.append(s)
@@ -430,7 +481,7 @@ def test_real_noise_denoising(models: list[Literal['Restormer', 'MaIR']] = ['Res
         psnr_list, ssim_list, time_list = [], [], []
         img_idx = 0
         for noisy_img, clean_img in tqdm(loader, desc="MaIR"):
-            pred, inference_time = run_model_inference(model, noisy_img, device, patch_size=PATCH_SIZE['MaIR'][1])
+            pred, inference_time = run_model_inference(model, noisy_img, device, patch_size=PATCH_SIZE['MaIR'][1], pad=pad)
             p, s = calculate_metrics(pred, clean_img)
             psnr_list.append(p)
             ssim_list.append(s)
@@ -472,7 +523,7 @@ def test_defocus_blur_deblurring():
 
     psnr_list, ssim_list, time_list = [], [], []
     for input_img, target_img, img_name in tqdm(loader, desc="Restormer Single"):
-        pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
+        pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'], pad=pad)
         p, s = calculate_metrics(pred, target_img)
         psnr_list.append(p)
         ssim_list.append(s)
@@ -503,7 +554,7 @@ def test_defocus_blur_deblurring():
 
     psnr_list, ssim_list, time_list = [], [], []
     for input_img, target_img, img_name in tqdm(loader, desc="Restormer Dual"):
-        pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
+        pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'], pad=pad)
         p, s = calculate_metrics(pred, target_img)
         psnr_list.append(p)
         ssim_list.append(s)
@@ -550,7 +601,13 @@ def test_motion_blur_deblurring(
 
             psnr_list, ssim_list, time_list = [], [], []
             for input_img, target_img, img_name in tqdm(loader, desc=f"DeblurGANv2 Inception | {dataset_name}"):
-                pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['DeblurGANv2'])
+                pred, inference_time = run_model_inference(model,
+                                                           input_img,
+                                                           device,
+                                                           normalize=deblurganv2.normalize,
+                                                           patch_size=PATCH_SIZE['DeblurGANv2'],
+                                                           pad=deblurganv2.pad,
+                                                           postprocess=deblurganv2.postprocess)
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
@@ -581,7 +638,13 @@ def test_motion_blur_deblurring(
 
             psnr_list, ssim_list, time_list = [], [], []
             for input_img, target_img, img_name in tqdm(loader, desc=f"DeblurGANv2 MobileNet | {dataset_name}"):
-                pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['DeblurGANv2'])
+                pred, inference_time = run_model_inference(model,
+                                                           input_img,
+                                                           device,
+                                                           normalize=deblurganv2.normalize,
+                                                           patch_size=PATCH_SIZE['DeblurGANv2'],
+                                                           pad=deblurganv2.pad,
+                                                           postprocess=deblurganv2.postprocess)
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
@@ -612,7 +675,7 @@ def test_motion_blur_deblurring(
 
             psnr_list, ssim_list, time_list = [], [], []
             for input_img, target_img, img_name in tqdm(loader, desc=f"Restormer | {dataset_name}"):
-                pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
+                pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'], pad=pad)
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
@@ -643,7 +706,7 @@ def test_motion_blur_deblurring(
 
             psnr_list, ssim_list, time_list = [], [], []
             for input_img, target_img, img_name in tqdm(loader, desc=f"MaIR | {dataset_name}"):
-                pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['MaIR'][1])
+                pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['MaIR'][1], pad=pad)
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
