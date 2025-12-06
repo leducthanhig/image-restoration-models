@@ -489,7 +489,7 @@ def test_defocus_blur_deblurring():
 
     psnr_list, ssim_list, time_list = [], [], []
     img_idx = 0
-    for input_img, target_img, _, _ in tqdm(loader, desc="Restormer Single"):
+    for input_img, target_img, _ in tqdm(loader, desc="Restormer Single"):
         pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
         p, s = calculate_metrics(pred, target_img)
         psnr_list.append(p)
@@ -522,7 +522,7 @@ def test_defocus_blur_deblurring():
 
     psnr_list, ssim_list, time_list = [], [], []
     img_idx = 0
-    for input_img, target_img, _, _ in tqdm(loader, desc="Restormer Dual"):
+    for input_img, target_img, _ in tqdm(loader, desc="Restormer Dual"):
         pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
         p, s = calculate_metrics(pred, target_img)
         psnr_list.append(p)

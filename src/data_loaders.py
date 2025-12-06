@@ -43,7 +43,6 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
     target_files = natsorted(glob(os.path.join(target_dir, '*.*')))
 
     indoor_labels = np.load(os.path.join(dir_path, 'indoor_labels.npy'))
-    outdoor_labels = np.load(os.path.join(dir_path, 'outdoor_labels.npy'))
 
     length = len(target_files)
 
@@ -53,8 +52,7 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
             inputL_file = inputL_files[i]
             inputR_file = inputR_files[i]
             target_file = target_files[i]
-            indoor_label = indoor_labels[i]
-            outdoor_label = outdoor_labels[i]
+            is_indoor = i+1 in indoor_labels
 
             if dual_pixel:
                 inputL_img = imread_uint16(inputL_file)
@@ -65,7 +63,7 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
                 input_img = imread_uint8(inputC_file)
                 target_img = imread_uint8(target_file)
 
-            yield input_img, target_img, indoor_label, outdoor_label
+            yield input_img, target_img, is_indoor
 
     return DataLoader(gen, length)
 
@@ -92,7 +90,7 @@ def motion_blur_dataset_loader(name: Literal['GoPro', 'HIDE', 'RealBlur_J', 'Rea
     return DataLoader(gen, length)
 
 
-def gaussian_noise_dataset_loader(name: Literal['Set12', 'BSD68', 'CBSD68', 'Kodak', 'McMaster', 'Urban100'] = 'BSD68', sigma=15, n_channels=1):
+def gaussian_noise_dataset_loader(name: Literal['Set12', 'BSD68', 'CBSD68', 'Kodak', 'McMaster', 'Urban100'] = 'BSD68', n_channels=1):
     dir_path = os.path.join(ROOT_DATASET_DIR, 'denoising', 'gaussian', 'test', name)
     files = natsorted(glob(os.path.join(dir_path, '*.*')))
 
