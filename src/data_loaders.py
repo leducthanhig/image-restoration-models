@@ -42,8 +42,6 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
     inputR_files = natsorted(glob(os.path.join(inputR_dir, '*.*')))
     target_files = natsorted(glob(os.path.join(target_dir, '*.*')))
 
-    indoor_labels = np.load(os.path.join(dir_path, 'indoor_labels.npy'))
-
     length = len(target_files)
 
     def gen():
@@ -52,7 +50,6 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
             inputL_file = inputL_files[i]
             inputR_file = inputR_files[i]
             target_file = target_files[i]
-            is_indoor = i+1 in indoor_labels
 
             if dual_pixel:
                 inputL_img = imread_uint16(inputL_file)
@@ -63,7 +60,7 @@ def defocus_blur_dataset_loader(name='DPDD', dual_pixel=False):
                 input_img = imread_uint8(inputC_file)
                 target_img = imread_uint8(target_file)
 
-            yield input_img, target_img, is_indoor
+            yield input_img, target_img, os.path.basename(inputC_file)
 
     return DataLoader(gen, length)
 
@@ -85,7 +82,7 @@ def motion_blur_dataset_loader(name: Literal['GoPro', 'HIDE', 'RealBlur_J', 'Rea
             input_img = imread_uint8(input_file)
             target_img = imread_uint8(target_file)
 
-            yield input_img, target_img
+            yield input_img, target_img, os.path.basename(input_file)
 
     return DataLoader(gen, length)
 
@@ -99,7 +96,7 @@ def gaussian_noise_dataset_loader(name: Literal['Set12', 'BSD68', 'CBSD68', 'Kod
     def gen():
         for file in files:
             img = imread_uint8(file, n_channels=n_channels)
-            yield img
+            yield img, os.path.basename(file)
 
     return DataLoader(gen, length)
 

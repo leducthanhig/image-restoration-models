@@ -120,10 +120,10 @@ def get_result_save_dir(test_name: str, dataset_name: str, model_name: str) -> s
     return dir_path
 
 
-def save_result_image(pred: np.ndarray, test_name: str, dataset_name: str, model_name: str, img_idx: int) -> str:
+def save_result_image(pred: np.ndarray, test_name: str, dataset_name: str, model_name: str, img_name: str) -> str:
     """Save prediction image to results directory."""
     dir_path = get_result_save_dir(test_name, dataset_name, model_name)
-    file_path = os.path.join(dir_path, f'{img_idx:04d}.png')
+    file_path = os.path.join(dir_path, img_name)
     imwrite_uint(file_path, pred)
     return file_path
 

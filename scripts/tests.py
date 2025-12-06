@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Literal
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 import torch
@@ -25,9 +26,9 @@ results_table = []
 
 
 def test_gaussian_denoising_gray_nonblind(
-    datasets_list: list[str] = ['Set12', 'BSD68', 'Urban100'],
+    datasets_list: list[Literal['Set12', 'BSD68', 'Urban100']] = ['Set12', 'BSD68', 'Urban100'],
     sigmas: list[int | float] = [15, 25, 50],
-    models: list[str] = ['REDNet', 'DnCNN', 'Restormer'],
+    models: list[Literal['REDNet', 'DnCNN', 'Restormer']] = ['REDNet', 'DnCNN', 'Restormer'],
 ):
     """Test Gaussian denoising on grayscale images (non-blind)."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -37,27 +38,26 @@ def test_gaussian_denoising_gray_nonblind(
             print(f"\n{'='*80}")
             print(f"Testing Gaussian Denoising (Gray, Non-blind) - {dataset_name}, sigma={sigma}")
             print(f"{'='*80}")
+            test_name = 'Gaussian_Denoising_Gray'
 
             # Load dataset
             loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=1)
 
-            # Test REDNet (sigma=50 only)
-            if sigma == 50 and 'REDNet' in models:
+            # Test REDNet
+            weights_path = f'{ROOT_WEIGHTS_DIR}/REDNet/{sigma}.pt'
+            if 'REDNet' in models and os.path.exists(weights_path):
                 print(f"\nTesting REDNet on {dataset_name} (sigma={sigma})...")
-                model = rednet.get_model(f'{ROOT_WEIGHTS_DIR}/REDNet/50.pt', device=device)
+                model = rednet.get_model(weights_path, device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Gray_NonBlind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="REDNet"):
+                for clean_img, img_name in tqdm(loader, desc="REDNet"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['REDNet'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'REDNet', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'REDNet', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -75,22 +75,20 @@ def test_gaussian_denoising_gray_nonblind(
                 })
 
             # Test DnCNN
-            if 'DnCNN' in models:
+            weights_path = f'{ROOT_WEIGHTS_DIR}/DnCNN/dncnn_{sigma}.pth'
+            if 'DnCNN' in models and os.path.exists(weights_path):
                 print(f"\nTesting DnCNN on {dataset_name} (sigma={sigma})...")
-                model = dncnn.get_model(f'{ROOT_WEIGHTS_DIR}/DnCNN/dncnn_{sigma}.pth', n_channels=1, nb=17, device=device)
+                model = dncnn.get_model(weights_path, n_channels=1, nb=17, device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Gray_NonBlind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="DnCNN"):
+                for clean_img, img_name in tqdm(loader, desc="DnCNN"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['DnCNN'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'DnCNN', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'DnCNN', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -108,22 +106,20 @@ def test_gaussian_denoising_gray_nonblind(
                 })
 
             # Test Restormer
-            if 'Restormer' in models:
+            config_path = f'src/restormer/options/GaussianGrayDenoising_RestormerSigma{sigma}.yml'
+            if 'Restormer' in models and os.path.exists(config_path):
                 print(f"\nTesting Restormer on {dataset_name} (sigma={sigma})...")
-                model = restormer.get_model(f'src/restormer/options/GaussianGrayDenoising_RestormerSigma{sigma}.yml', device=device)
+                model = restormer.get_model(config_path, device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Gray_NonBlind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="Restormer"):
+                for clean_img, img_name in tqdm(loader, desc="Restormer"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -142,9 +138,9 @@ def test_gaussian_denoising_gray_nonblind(
 
 
 def test_gaussian_denoising_gray_blind(
-    datasets_list: list[str] = ['Set12', 'BSD68', 'Urban100'],
+    datasets_list: list[Literal['Set12', 'BSD68', 'Urban100']] = ['Set12', 'BSD68', 'Urban100'],
     sigmas: list[int | float] = [15, 25, 50],
-    models: list[str] = ['DnCNN', 'Restormer'],
+    models: list[Literal['DnCNN', 'Restormer']] = ['DnCNN', 'Restormer'],
 ):
     """Test Gaussian denoising on grayscale images (blind)."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -154,6 +150,7 @@ def test_gaussian_denoising_gray_blind(
             print(f"\n{'='*80}")
             print(f"Testing Gaussian Denoising (Gray, Blind) - {dataset_name}, sigma={sigma}")
             print(f"{'='*80}")
+            test_name = 'Gaussian_Denoising_Gray_Blind'
 
             # Load dataset
             loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=1)
@@ -163,18 +160,15 @@ def test_gaussian_denoising_gray_blind(
                 print(f"\nTesting DnCNN (Blind) on {dataset_name} (sigma={sigma})...")
                 model = dncnn.get_model(f'{ROOT_WEIGHTS_DIR}/DnCNN/dncnn_gray_blind.pth', n_channels=1, nb=20, device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Gray_Blind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="DnCNN Blind"):
+                for clean_img, img_name in tqdm(loader, desc="DnCNN Blind"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['DnCNN'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'DnCNN', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'DnCNN', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -196,18 +190,15 @@ def test_gaussian_denoising_gray_blind(
                 print(f"\nTesting Restormer (Blind) on {dataset_name} (sigma={sigma})...")
                 model = restormer.get_model('src/restormer/options/GaussianGrayDenoising_Restormer.yml', device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Gray_Blind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="Restormer Blind"):
+                for clean_img, img_name in tqdm(loader, desc="Restormer Blind"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -226,9 +217,9 @@ def test_gaussian_denoising_gray_blind(
 
 
 def test_gaussian_denoising_color_nonblind(
-    datasets_list: list[str] = ['CBSD68', 'Kodak', 'McMaster', 'Urban100'],
+    datasets_list: list[Literal['CBSD68', 'Kodak', 'McMaster', 'Urban100']] = ['CBSD68', 'Kodak', 'McMaster', 'Urban100'],
     sigmas: list[int | float] = [15, 25, 50],
-    models: list[str] = ['Restormer', 'MaIR'],
+    models: list[Literal['Restormer', 'MaIR']] = ['Restormer', 'MaIR'],
 ):
     """Test Gaussian denoising on color images (non-blind)."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -238,27 +229,26 @@ def test_gaussian_denoising_color_nonblind(
             print(f"\n{'='*80}")
             print(f"Testing Gaussian Denoising (Color, Non-blind) - {dataset_name}, sigma={sigma}")
             print(f"{'='*80}")
+            test_name = 'Gaussian_Denoising_Color_Nonblind'
 
             # Load dataset
             loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=3)
 
             # Test Restormer
-            if 'Restormer' in models:
+            config_path = f'src/restormer/options/GaussianColorDenoising_RestormerSigma{sigma}.yml'
+            if 'Restormer' in models and os.path.exists(config_path):
                 print(f"\nTesting Restormer on {dataset_name} (sigma={sigma})...")
-                model = restormer.get_model(f'src/restormer/options/GaussianColorDenoising_RestormerSigma{sigma}.yml', device=device)
+                model = restormer.get_model(config_path, device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Color_NonBlind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="Restormer"):
+                for clean_img, img_name in tqdm(loader, desc="Restormer"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -276,22 +266,20 @@ def test_gaussian_denoising_color_nonblind(
                 })
 
             # Test MaIR
-            if 'MaIR' in models:
+            config_path = f'src/mair/options/test_MaIR_CDN_s{sigma}.yml'
+            if 'MaIR' in models and os.path.exists(config_path):
                 print(f"\nTesting MaIR on {dataset_name} (sigma={sigma})...")
-                model = mair.get_model(f'src/mair/options/test_MaIR_CDN_s{sigma}.yml')
+                model = mair.get_model(config_path)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Color_NonBlind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="MaIR"):
+                for clean_img, img_name in tqdm(loader, desc="MaIR"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['MaIR'][0])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'MaIR', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'MaIR', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -310,9 +298,9 @@ def test_gaussian_denoising_color_nonblind(
 
 
 def test_gaussian_denoising_color_blind(
-    datasets_list: list[str] = ['CBSD68', 'Kodak', 'McMaster', 'Urban100'],
+    datasets_list: list[Literal['CBSD68', 'Kodak', 'McMaster', 'Urban100']] = ['CBSD68', 'Kodak', 'McMaster', 'Urban100'],
     sigmas: list[int | float] = [15, 25, 50],
-    models: list[str] = ['DnCNN', 'Restormer'],
+    models: list[Literal['DnCNN', 'Restormer']] = ['DnCNN', 'Restormer'],
 ):
     """Test Gaussian denoising on color images (blind)."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -321,6 +309,7 @@ def test_gaussian_denoising_color_blind(
             print(f"\n{'='*80}")
             print(f"Testing Gaussian Denoising (Color, Blind) - {dataset_name}, sigma={sigma}")
             print(f"{'='*80}")
+            test_name = 'Gaussian_Denoising_Color_Blind'
 
             # Load dataset
             loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=3)
@@ -330,18 +319,15 @@ def test_gaussian_denoising_color_blind(
                 print(f"\nTesting DnCNN (Blind) on {dataset_name} (sigma={sigma})...")
                 model = dncnn.get_model(f'{ROOT_WEIGHTS_DIR}/DnCNN/dncnn_color_blind.pth', n_channels=3, nb=20, device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Color_Blind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="DnCNN Blind"):
+                for clean_img, img_name in tqdm(loader, desc="DnCNN Blind"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['DnCNN'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'DnCNN', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'DnCNN', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -363,18 +349,15 @@ def test_gaussian_denoising_color_blind(
                 print(f"\nTesting Restormer (Blind) on {dataset_name} (sigma={sigma})...")
                 model = restormer.get_model('src/restormer/options/GaussianColorDenoising_Restormer.yml', device=device)
                 model_params = get_model_total_parameters(model)
-                test_name = 'Gaussian_Denoising_Color_Blind'
 
                 psnr_list, ssim_list, time_list = [], [], []
-                img_idx = 0
-                for clean_img in tqdm(loader, desc="Restormer Blind"):
+                for clean_img, img_name in tqdm(loader, desc="Restormer Blind"):
                     pred, inference_time = run_model_inference(model, clean_img, device, need_degradation=True, noise_level=sigma, patch_size=PATCH_SIZE['Restormer'])
                     p, s = calculate_metrics(pred, clean_img)
                     psnr_list.append(p)
                     ssim_list.append(s)
                     time_list.append(inference_time)
-                    save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
-                    img_idx += 1
+                    save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
                     'Task': 'Gaussian Denoising',
@@ -392,7 +375,7 @@ def test_gaussian_denoising_color_blind(
                 })
 
 
-def test_real_noise_denoising(models: list[str] = ['Restormer', 'MaIR']):
+def test_real_noise_denoising(models: list[Literal['Restormer', 'MaIR']] = ['Restormer', 'MaIR']):
     """Test real noise denoising on SIDD dataset."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset_name = 'SIDD'
@@ -419,7 +402,7 @@ def test_real_noise_denoising(models: list[str] = ['Restormer', 'MaIR']):
             psnr_list.append(p)
             ssim_list.append(s)
             time_list.append(inference_time)
-            save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
+            save_result_image(pred, test_name, dataset_name, 'Restormer', f'{img_idx:04d}.png')
             img_idx += 1
 
         results_table.append({
@@ -452,7 +435,7 @@ def test_real_noise_denoising(models: list[str] = ['Restormer', 'MaIR']):
             psnr_list.append(p)
             ssim_list.append(s)
             time_list.append(inference_time)
-            save_result_image(pred, test_name, dataset_name, 'MaIR', img_idx)
+            save_result_image(pred, test_name, dataset_name, 'MaIR', f'{img_idx:04d}.png')
             img_idx += 1
 
         results_table.append({
@@ -488,15 +471,13 @@ def test_defocus_blur_deblurring():
     test_name = 'Defocus_Deblurring_Single'
 
     psnr_list, ssim_list, time_list = [], [], []
-    img_idx = 0
-    for input_img, target_img, _ in tqdm(loader, desc="Restormer Single"):
+    for input_img, target_img, img_name in tqdm(loader, desc="Restormer Single"):
         pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
         p, s = calculate_metrics(pred, target_img)
         psnr_list.append(p)
         ssim_list.append(s)
         time_list.append(inference_time)
-        save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
-        img_idx += 1
+        save_result_image(pred, test_name, dataset_name, 'Restormer', img_name)
 
     results_table.append({
         'Task': 'Defocus Deblurring',
@@ -521,15 +502,13 @@ def test_defocus_blur_deblurring():
     test_name = 'Defocus_Deblurring_Dual'
 
     psnr_list, ssim_list, time_list = [], [], []
-    img_idx = 0
-    for input_img, target_img, _ in tqdm(loader, desc="Restormer Dual"):
+    for input_img, target_img, img_name in tqdm(loader, desc="Restormer Dual"):
         pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
         p, s = calculate_metrics(pred, target_img)
         psnr_list.append(p)
         ssim_list.append(s)
         time_list.append(inference_time)
-        save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
-        img_idx += 1
+        save_result_image(pred, test_name, dataset_name, 'Restormer', img_name)
 
     results_table.append({
         'Task': 'Defocus Deblurring',
@@ -548,8 +527,8 @@ def test_defocus_blur_deblurring():
 
 
 def test_motion_blur_deblurring(
-    datasets_list: list[str] = ['GoPro', 'HIDE', 'RealBlur_J', 'RealBlur_R'],
-    models: list[str] = ['DeblurGANv2 (Inception)', 'DeblurGANv2 (MobileNet)', 'Restormer', 'MaIR'],
+    datasets_list: list[Literal['GoPro', 'HIDE', 'RealBlur_J', 'RealBlur_R']] = ['GoPro', 'HIDE', 'RealBlur_J', 'RealBlur_R'],
+    models: list[Literal['DeblurGANv2 (Inception)', 'DeblurGANv2 (MobileNet)', 'Restormer', 'MaIR']] = ['DeblurGANv2 (Inception)', 'DeblurGANv2 (MobileNet)', 'Restormer', 'MaIR'],
 ):
     """Test motion blur deblurring on multiple datasets: GoPro, HIDE, RealBlur_J, RealBlur_R."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -570,15 +549,13 @@ def test_motion_blur_deblurring(
             test_name = 'Motion_Deblurring'
 
             psnr_list, ssim_list, time_list = [], [], []
-            img_idx = 0
-            for input_img, target_img in tqdm(loader, desc=f"DeblurGANv2 Inception | {dataset_name}"):
+            for input_img, target_img, img_name in tqdm(loader, desc=f"DeblurGANv2 Inception | {dataset_name}"):
                 pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['DeblurGANv2'])
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
                 time_list.append(inference_time)
-                save_result_image(pred, test_name, dataset_name, 'DeblurGANv2_fpn_inception', img_idx)
-                img_idx += 1
+                save_result_image(pred, test_name, dataset_name, 'DeblurGANv2_fpn_inception', img_name)
 
             results_table.append({
                 'Task': 'Motion Deblurring',
@@ -603,15 +580,13 @@ def test_motion_blur_deblurring(
             test_name = 'Motion_Deblurring'
 
             psnr_list, ssim_list, time_list = [], [], []
-            img_idx = 0
-            for input_img, target_img in tqdm(loader, desc=f"DeblurGANv2 MobileNet | {dataset_name}"):
+            for input_img, target_img, img_name in tqdm(loader, desc=f"DeblurGANv2 MobileNet | {dataset_name}"):
                 pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['DeblurGANv2'])
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
                 time_list.append(inference_time)
-                save_result_image(pred, test_name, dataset_name, 'DeblurGANv2_fpn_mobilenet', img_idx)
-                img_idx += 1
+                save_result_image(pred, test_name, dataset_name, 'DeblurGANv2_fpn_mobilenet', img_name)
 
             results_table.append({
                 'Task': 'Motion Deblurring',
@@ -636,15 +611,13 @@ def test_motion_blur_deblurring(
             test_name = 'Motion_Deblurring'
 
             psnr_list, ssim_list, time_list = [], [], []
-            img_idx = 0
-            for input_img, target_img in tqdm(loader, desc=f"Restormer | {dataset_name}"):
+            for input_img, target_img, img_name in tqdm(loader, desc=f"Restormer | {dataset_name}"):
                 pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['Restormer'])
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
                 time_list.append(inference_time)
-                save_result_image(pred, test_name, dataset_name, 'Restormer', img_idx)
-                img_idx += 1
+                save_result_image(pred, test_name, dataset_name, 'Restormer', img_name)
 
             results_table.append({
                 'Task': 'Motion Deblurring',
@@ -669,15 +642,13 @@ def test_motion_blur_deblurring(
             test_name = 'Motion_Deblurring'
 
             psnr_list, ssim_list, time_list = [], [], []
-            img_idx = 0
-            for input_img, target_img in tqdm(loader, desc=f"MaIR | {dataset_name}"):
+            for input_img, target_img, img_name in tqdm(loader, desc=f"MaIR | {dataset_name}"):
                 pred, inference_time = run_model_inference(model, input_img, device, patch_size=PATCH_SIZE['MaIR'][1])
                 p, s = calculate_metrics(pred, target_img)
                 psnr_list.append(p)
                 ssim_list.append(s)
                 time_list.append(inference_time)
-                save_result_image(pred, test_name, dataset_name, 'MaIR', img_idx)
-                img_idx += 1
+                save_result_image(pred, test_name, dataset_name, 'MaIR', img_name)
 
             results_table.append({
                 'Task': 'Motion Deblurring',
@@ -698,7 +669,7 @@ def test_motion_blur_deblurring(
 def save_results(output_path=os.path.join(ROOT_RESULTS_DIR, 'results_summary.csv')):
     """Save results table to CSV file."""
     df = pd.DataFrame(results_table)
-    # df.to_csv(output_path, index=False)
+    df.to_csv(output_path, index=False)
     print(f"\n{'='*80}")
     print(f"Results saved to {output_path}")
     print(f"{'='*80}")
