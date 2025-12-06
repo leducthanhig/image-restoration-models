@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-import datasets
+import data_loaders
 import deblurganv2
 import dncnn
 import mair
@@ -39,7 +39,7 @@ def test_gaussian_denoising_gray_nonblind(
             print(f"{'='*80}")
 
             # Load dataset
-            loader = datasets.gaussian_noise_dataset_loader(dataset_name, n_channels=1)
+            loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=1)
 
             # Test REDNet (sigma=50 only)
             if sigma == 50 and 'REDNet' in models:
@@ -156,7 +156,7 @@ def test_gaussian_denoising_gray_blind(
             print(f"{'='*80}")
 
             # Load dataset
-            loader = datasets.gaussian_noise_dataset_loader(dataset_name, n_channels=1)
+            loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=1)
 
             # Test DnCNN
             if 'DnCNN' in models:
@@ -240,7 +240,7 @@ def test_gaussian_denoising_color_nonblind(
             print(f"{'='*80}")
 
             # Load dataset
-            loader = datasets.gaussian_noise_dataset_loader(dataset_name, n_channels=3)
+            loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=3)
 
             # Test Restormer
             if 'Restormer' in models:
@@ -312,7 +312,7 @@ def test_gaussian_denoising_color_nonblind(
 def test_gaussian_denoising_color_blind(
     datasets_list: list[str] = ['CBSD68', 'Kodak', 'McMaster', 'Urban100'],
     sigmas: list[int | float] = [15, 25, 50],
-    models: list[str] = ['DnCNN', 'Restormer', 'MaIR'],
+    models: list[str] = ['DnCNN', 'Restormer'],
 ):
     """Test Gaussian denoising on color images (blind)."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -323,7 +323,7 @@ def test_gaussian_denoising_color_blind(
             print(f"{'='*80}")
 
             # Load dataset
-            loader = datasets.gaussian_noise_dataset_loader(dataset_name, n_channels=3)
+            loader = data_loaders.gaussian_noise_dataset_loader(dataset_name, n_channels=3)
 
             # Test DnCNN
             if 'DnCNN' in models:
@@ -402,7 +402,7 @@ def test_real_noise_denoising(models: list[str] = ['Restormer', 'MaIR']):
     print(f"{'='*80}")
 
     # Load dataset
-    loader = datasets.real_noise_dataset_loader(dataset_name)
+    loader = data_loaders.real_noise_dataset_loader(dataset_name)
 
     # Test Restormer
     if 'Restormer' in models:
@@ -482,7 +482,7 @@ def test_defocus_blur_deblurring():
 
     # Test Restormer (Single-image)
     print(f"\nTesting Restormer (Single-image) on {dataset_name}...")
-    loader = datasets.defocus_blur_dataset_loader(dataset_name, dual_pixel=False)
+    loader = data_loaders.defocus_blur_dataset_loader(dataset_name, dual_pixel=False)
     model = restormer.get_model('src/restormer/options/DefocusDeblur_Single_8bit_Restormer.yml', device=device)
     model_params = get_model_total_parameters(model)
     test_name = 'Defocus_Deblurring_Single'
@@ -515,7 +515,7 @@ def test_defocus_blur_deblurring():
 
     # Test Restormer (Dual-pixel)
     print(f"\nTesting Restormer (Dual-pixel) on {dataset_name}...")
-    loader = datasets.defocus_blur_dataset_loader(dataset_name, dual_pixel=True)
+    loader = data_loaders.defocus_blur_dataset_loader(dataset_name, dual_pixel=True)
     model = restormer.get_model('src/restormer/options/DefocusDeblur_DualPixel_16bit_Restormer.yml', device=device)
     model_params = get_model_total_parameters(model)
     test_name = 'Defocus_Deblurring_Dual'
@@ -560,7 +560,7 @@ def test_motion_blur_deblurring(
         print(f"{'='*80}")
 
         # Load dataset
-        loader = datasets.motion_blur_dataset_loader(dataset_name)
+        loader = data_loaders.motion_blur_dataset_loader(dataset_name)
 
         # Test DeblurGANv2 (fpn_inception)
         if 'DeblurGANv2 (Inception)' in models:
