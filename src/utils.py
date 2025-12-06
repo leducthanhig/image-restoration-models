@@ -10,6 +10,7 @@ from skimage.metrics import structural_similarity as ssim
 
 from deblurganv2 import Predictor
 from restormer import Restormer
+from mair.realDenoising.basicsr.models.archs.mairunet_arch import MaIRUNet
 from configs import ROOT_RESULTS_DIR
 
 
@@ -208,7 +209,7 @@ def run_model_inference(
                     # Convert to tensor: (H, W, C) -> (1, C, H, W)
                     input_tensor = torch.from_numpy(img_normed.transpose(2, 0, 1)).unsqueeze(0).to(device)
 
-                    if isinstance(model, Restormer):
+                    if isinstance(model, Restormer) or isinstance(model, MaIRUNet):
                         # Padding in case images are not multiples of 8
                         h,w = input_tensor.shape[2], input_tensor.shape[3]
                         factor = 8
