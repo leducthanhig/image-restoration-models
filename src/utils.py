@@ -235,10 +235,10 @@ def run_model_inference(
         # Modified from: https://github.com/cszn/KAIR/blob/fc1732f4a4514e42ce15e5b3a1e18c828af47a1e/main_test_swinir.py#L262-L282
         h, w = img_normed.shape[:2]
         if patch_size:
-            patch_size = min(patch_size, h, w)
-            stride = patch_size - patch_overlap
-            h_idx_list = list(range(0, h-patch_size, stride)) + [h-patch_size]
-            w_idx_list = list(range(0, w-patch_size, stride)) + [w-patch_size]
+            patch_size = min(patch_size, max(h, w))
+            stride = max(patch_size - patch_overlap, 1)
+            h_idx_list = list(range(0, h-patch_size, stride)) + [max(h-patch_size, 0)]
+            w_idx_list = list(range(0, w-patch_size, stride)) + [max(w-patch_size, 0)]
         else:
             patch_size = max(h, w)
             h_idx_list = [0]
@@ -274,9 +274,14 @@ def run_model_inference(
                 # Convert back to numpy: (1, C, H, W) -> (H, W, C)
                 pred = output_tensor.squeeze(0).cpu().numpy().transpose(1, 2, 0)
 
+                # If the patch at the edge is smaller than patch_size,
+                # we need to crop the window_mask to match.
+                curr_h, curr_w = pred.shape[:2]
+                current_window = window_mask[:curr_h, :curr_w]
+
                 # Accumulate output and weights with weights
-                output_img[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :] += pred * window_mask
-                weight_map[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :] += window_mask
+                output_img[h_idx:h_idx+curr_h, w_idx:w_idx+curr_w, :] += pred * current_window
+                weight_map[h_idx:h_idx+curr_h, w_idx:w_idx+curr_w, :] += current_window
 
         # Average overlapping regions with weights
         output_img /= np.maximum(weight_map, 1e-8)
