@@ -262,9 +262,9 @@ def run_model_inference(
                 input_tensor = torch.from_numpy(input_patch.transpose(2, 0, 1)).unsqueeze(0).to(device)
 
                 if pad is not None:
-                    h, w = input_tensor.shape[-2:]
+                    h_patch, w_patch = input_tensor.shape[-2:]
                     input_tensor = pad(input_tensor)
-                    output_tensor: torch.Tensor = model(input_tensor)[:, :, :h, :w]
+                    output_tensor: torch.Tensor = model(input_tensor)[:, :, :h_patch, :w_patch]
                 else:
                     output_tensor: torch.Tensor = model(input_tensor)
 
