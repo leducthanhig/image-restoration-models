@@ -165,17 +165,17 @@ def pad(x: torch.Tensor, downscale_factor: int = 8):
     return x
 
 
-def get_gaussian_weights(height, width, n_channels=3, sigma_scale=0.125):
+def get_gaussian_weights(height: int, width: int, n_channels=3, sigma_scale=0.125):
     """
     Generates a 2D Gaussian mask.
 
     Args:
-        height, width: Dimensions of the patch.
-        n_channels: Number of channels (usually 3).
+        height: Height of the mask.
+        width: Width of the mask.
+        n_channels: Number of channels.
         sigma_scale: Controls the 'spread' of the bell curve.
                      Lower = sharper peak (uses only strict center).
                      Higher = flatter (averages more of the edge).
-                     0.125 is a standard starting point for 50% overlap.
     """
     # 1. Create a grid of coordinates
     y_coords = np.arange(height)
@@ -214,7 +214,7 @@ def run_model_inference(
     need_degradation=False,
     noise_level: int | float | None = None,
     pad: Callable[[torch.Tensor], torch.Tensor] | None = None,
-    postprocess: Callable[[torch.Tensor], np.ndarray] | None = None,
+    postprocess: Callable[[torch.Tensor], torch.Tensor] | None = None,
 ):
     """Run inference based on model type. Returns (prediction, inference_time_ms)."""
     start_time = time.time()
