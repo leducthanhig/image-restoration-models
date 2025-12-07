@@ -2,12 +2,43 @@ ROOT_DATASET_DIR = 'datasets'
 ROOT_WEIGHTS_DIR = 'weights'
 ROOT_RESULTS_DIR = 'results'
 
-# Default maximum patch sizes for different models
-# These values are tested on GTX 1650 Mobile with 4GB VRAM
-PATCH_SIZE = {
-    'REDNet': 448,
-    'DnCNN': 2048,
-    'DeblurGANv2': 2048,
-    'Restormer': 544,
-    'MaIR': [352, 384],
+PATCH_CONFIG = {
+    'REDNet': {
+        'patch_size': 128,
+        'patch_overlap': 32
+    },
+    'DnCNN': {
+        'patch_size': 256,
+        'patch_overlap': 48
+    },
+    'DeblurGANv2': [
+        {
+            'patch_size': 768,
+            'patch_overlap': 128
+        },
+        {
+            'patch_size': 2048,
+            'patch_overlap': 348
+        }
+    ],
+    'Restormer': [
+        {
+            'patch_size': 256,
+            'patch_overlap': 48
+        },
+        {
+            'patch_size': 512,
+            'patch_overlap': 96
+        }
+    ],
+    'MaIR': [
+        {
+            'patch_size': 128,
+            'patch_overlap': 32
+        },
+        {
+            'patch_size': 800,
+            'patch_overlap': 128
+        }
+    ]
 }
