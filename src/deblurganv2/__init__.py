@@ -2,10 +2,10 @@ import os
 
 import numpy as np
 import torch
-import yaml
 
 from .aug import get_normalize
 from .models.networks import get_generator
+from .config import config
 
 
 def normalize(x: np.ndarray):
@@ -24,14 +24,11 @@ def pad(x: torch.Tensor):
     return x
 
 
-def postprocess(x: torch.Tensor) -> np.ndarray:
+def postprocess(x: torch.Tensor):
     return (x + 1) / 2.0
 
 
 def get_model(weights_path: str, device: torch.device):
-    with open('src/deblurganv2/config/config.yaml',encoding='utf-8') as cfg:
-        config = yaml.load(cfg, Loader=yaml.FullLoader)
-
     model_name = os.path.basename(weights_path).split('.')[0]
     config['model']['g_name'] = model_name
 
