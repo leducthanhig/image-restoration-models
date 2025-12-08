@@ -215,6 +215,7 @@ def run_model_inference(
     noise_level: int | float | None = None,
     pad: Callable[[torch.Tensor], torch.Tensor] | None = None,
     postprocess: Callable[[torch.Tensor], torch.Tensor] | None = None,
+    progress_bar=None,
 ):
     """Run inference based on model type. Returns (prediction, inference_time_ms)."""
     start_time = time.time()
@@ -250,6 +251,9 @@ def run_model_inference(
         # Pre-calculate the window mask once
         window_mask = get_gaussian_weights(patch_size, patch_size, min(3, img_normed.shape[2]))
 
+        if progress_bar is not None:
+            progress_bar = progress_bar.tqdm(None, desc="Processing patches", total=len(h_idx_list) * len(w_idx_list))
+
         for h_idx in h_idx_list:
             for w_idx in w_idx_list:
                 input_patch = img_normed[h_idx:h_idx+patch_size, w_idx:w_idx+patch_size, :].copy()
@@ -282,6 +286,9 @@ def run_model_inference(
                 # Accumulate output and weights with weights
                 output_img[h_idx:h_idx+curr_h, w_idx:w_idx+curr_w, :] += pred * current_window
                 weight_map[h_idx:h_idx+curr_h, w_idx:w_idx+curr_w, :] += current_window
+
+                if progress_bar is not None:
+                    progress_bar.update()
 
         # Average overlapping regions with weights
         output_img /= np.maximum(weight_map, 1e-8)

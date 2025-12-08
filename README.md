@@ -5,6 +5,8 @@ This repository contains implementations and pre-trained models for various imag
 - Denoising Models: REDNet, DnCNN, Restormer, MaIR
 - Deblurring Models: DeblurGANv2, Restormer, MaIR
 
+Furthermore, there is a Gradio-based web demo available for interactive testing of the models.
+
 # Pre-requisites
 
 - Python 3.11+
@@ -53,14 +55,14 @@ make download-datasets
 python scripts/tests.py
 ```
 
-# Test Configurations
+## Test Configurations
 
 These tests cover a variety of image restoration tasks including denoising and deblurring using different datasets and models.
 After running the tests, the results will be saved in `results/` directory and a summary CSV file `results/results_summary.csv`.
 
-## Denoising
+### Denoising
 
-### Gaussian Noise
+#### Gaussian Noise
 
 * Gray Image
     * Non-blind
@@ -81,22 +83,29 @@ After running the tests, the results will be saved in `results/` directory and a
         * Datasets: CBSD68, Kodak, McMaster, Urban100
         * Models: DnCNN, Restormer
 
-### Real Noise
+#### Real Noise
 
 * Datasets: SIDD
 * Models: Restormer, MaIR
 
-## Deblurring
+### Deblurring
 
-### Defocus Blur
+#### Defocus Blur
 
 * Datasets: DPDD
 * Models: Restormer (single-image, dual-pixel)
 
-### Motion Blur
+#### Motion Blur
 
 * Datasets: GoPro, HIDE, RealBlur_J, RealBlur_R
 * Models: DeblurGANv2 (fpn_inception, fpn_mobilenet), Restormer, MaIR
+
+# Web Demo
+To run the Gradio-based web demo for interactive testing of the models:
+
+```bash
+gradio scripts/demo.py
+```
 
 # Credits
 
