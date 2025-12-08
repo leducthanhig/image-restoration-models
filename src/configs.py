@@ -18,7 +18,7 @@ PATCH_CONFIG = {
         },
         {
             'patch_size': 2048,
-            'patch_overlap': 348
+            'patch_overlap': 384
         }
     ],
     'Restormer': [
