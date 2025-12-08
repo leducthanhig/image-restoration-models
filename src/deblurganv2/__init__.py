@@ -38,4 +38,4 @@ def get_model(weights_path: str, device: torch.device):
     model.train(True)
 
     print(f"Successfully loaded {np.sum([p.numel() for p in model.parameters()]):,} parameters from {weights_path}")
-    return model
+    return model.module
