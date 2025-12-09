@@ -67,7 +67,7 @@ def get_model(opt_path: str):
         model: ImageCleanModel = create_model(opt)
     else:
         model: SRModel = build_model(opt)
-    bare_model = model.net_g
+    bare_model = model.net_g.eval()
 
     weights_path = opt['path']['pretrain_network_g']
     print(f"Successfully loaded {np.sum([p.numel() for p in bare_model.parameters()]):,} parameters from {weights_path}")
