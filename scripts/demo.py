@@ -239,12 +239,10 @@ def update_models(task, subtask, dataset, blind_noise=False):
 
 
 def update_noisy_image(image, sigma):
-    global added_noise
-    added_noise = True
-
     noisy_img = add_gaussian_noise(image, sigma)
     noisy_img = np.clip(noisy_img * 255, 0, 255).astype(np.uint8)
-    return Image.fromarray(noisy_img)
+    # return noisy image and set the added-noise flag (state) to True
+    return Image.fromarray(noisy_img), True
 
 
 def show_selected(input_source, images, evt: gr.SelectData):
@@ -255,31 +253,33 @@ def show_selected(input_source, images, evt: gr.SelectData):
     return selected[0]
 
 
-def update_input_image(image, subtask):
+def update_input_image(image, subtask, added_noise_state):
     if image is None:
         return (
             gr.update(interactive=False),
-            gr.update(interactive=False)
+            gr.update(interactive=False),
+            False
         )
 
     subtask_key = subtask.lower()
     if subtask_key == 'gaussian':
-        global added_noise
-        if added_noise:
-            added_noise = False
+        if added_noise_state:
             return (
                 gr.update(interactive=False),
-                gr.update(interactive=True)
+                gr.update(interactive=True),
+                False
             )
 
         return (
             gr.update(interactive=True),
-            gr.update(interactive=False)
+            gr.update(interactive=False),
+            False
         )
 
     return (
         gr.update(interactive=False),
-        gr.update(interactive=True)
+        gr.update(interactive=True),
+        False
     )
 
 
@@ -351,8 +351,6 @@ initial_models = get_models(initial_tasks[0], initial_subtasks[0], initial_datas
 initial_patch_config = get_patch_config(initial_tasks[0], initial_subtasks[0], initial_models[0])
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-added_noise = False
 
 with gr.Blocks(title=title) as demo:
     gr.HTML(f"<center><h1>{title}</h1></center><br>")
@@ -459,6 +457,9 @@ with gr.Blocks(title=title) as demo:
 
         image_slider = gr.ImageSlider(label='Image Slider', interactive=False)
 
+    # state to remember whether gaussian noise was added to the input image
+    added_noise = gr.State(False)
+
 
     # Set up interactions
     task_dropdown.change(update_subtask,
@@ -479,7 +480,7 @@ with gr.Blocks(title=title) as demo:
 
     add_noise_btn.click(update_noisy_image,
                         inputs=[input_image, sigma_slider],
-                        outputs=[input_image])
+                        outputs=[input_image, added_noise])
 
     sample_images.select(fn=show_selected,
                          inputs=[input_source, sample_images],
@@ -498,8 +499,8 @@ with gr.Blocks(title=title) as demo:
                                 outputs=[sigma_dropdown, sigma_slider, model_dropdown])
 
     input_image.change(fn=update_input_image,
-                        inputs=[input_image, subtask_dropdown],
-                        outputs=[add_noise_btn, run_btn])
+                        inputs=[input_image, subtask_dropdown, added_noise],
+                        outputs=[add_noise_btn, run_btn, added_noise])
 
     model_dropdown.change(update_patch_config,
                           inputs=[task_dropdown, subtask_dropdown, model_dropdown],
