@@ -456,6 +456,7 @@ with gr.Blocks(title=title) as demo:
                     right_image = gr.Image(label='Right Image', interactive=False)
 
         image_slider = gr.ImageSlider(label='Image Slider', interactive=False)
+        swap_btn = gr.Button('Swap Images')
 
     # state to remember whether gaussian noise was added to the input image
     added_noise = gr.State(False)
@@ -532,6 +533,10 @@ with gr.Blocks(title=title) as demo:
     right_image.change(fn=update_image_slider,
                        inputs=[left_image, right_image],
                        outputs=[image_slider])
+
+    swap_btn.click(fn=lambda imgs: imgs[::-1],
+                   inputs=[image_slider],
+                   outputs=[image_slider])
 
 
 demo.launch(theme=gr.themes.Origin())
