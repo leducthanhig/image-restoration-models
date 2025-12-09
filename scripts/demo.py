@@ -340,6 +340,28 @@ def update_image_slider(img1, img2):
     return gr.update(value=(img1, img2))
 
 
+def select_from_sample(left_src, right_src, active, images, evt: gr.SelectData):
+    selected = images[evt.index]
+    img = selected[0]
+    left_update, right_update = gr.update(), gr.update()
+    if active == 'left' and left_src == 'Sample Images':
+        left_update = gr.update(value=img, interactive=False)
+    elif active == 'right' and right_src == 'Sample Images':
+        right_update = gr.update(value=img, interactive=False)
+    return left_update, right_update
+
+
+def select_from_results(left_src, right_src, active, images, evt: gr.SelectData):
+    selected = images[evt.index]
+    img = selected[0]
+    left_update, right_update = gr.update(), gr.update()
+    if active == 'left' and left_src == 'Result Images':
+        left_update = gr.update(value=img, interactive=False)
+    elif active == 'right' and right_src == 'Result Images':
+        right_update = gr.update(value=img, interactive=False)
+    return left_update, right_update
+
+
 title = 'Image Restoration Demo'
 
 task_data = get_task_data()
@@ -439,25 +461,33 @@ with gr.Blocks(title=title) as demo:
         with gr.Row():
             with gr.Column():
                 with gr.Group():
-                    left_source = gr.Radio(choices=['Upload Image', 'Input Image'],
-                                        label='Left Source',
-                                        value='Input Image',
-                                        interactive=True)
+                    left_source = gr.Radio(choices=['Upload Image', 'Input Image',
+                                                    'Sample Images', 'Result Images'],
+                                            label='Left Source',
+                                            value='Input Image',
+                                            info=('Re-select this radio to activate this side,'
+                                                  'then pick an image from the Sample/Result Gallery.'),
+                                            interactive=True)
 
                     left_image = gr.Image(label='Left Image', interactive=False)
 
             with gr.Column():
                 with gr.Group():
-                    right_source = gr.Radio(choices=['Upload Image', 'Restored Image'],
-                                        label='Right Source',
-                                        value='Restored Image',
-                                        interactive=True)
+                    right_source = gr.Radio(choices=['Upload Image', 'Restored Image',
+                                                     'Sample Images', 'Result Images'],
+                                            label='Right Source',
+                                            value='Restored Image',
+                                            info=('Re-select this radio to activate this side,'
+                                                  'then pick an image from the Sample/Result Gallery.'),
+                                            interactive=True)
 
                     right_image = gr.Image(label='Right Image', interactive=False)
 
         image_slider = gr.ImageSlider(label='Image Slider', interactive=False)
         swap_btn = gr.Button('Swap Images')
 
+    # state to remember which compare side was last activated (clicked)
+    active_side = gr.State('left')
     # state to remember whether gaussian noise was added to the input image
     added_noise = gr.State(False)
 
@@ -486,6 +516,10 @@ with gr.Blocks(title=title) as demo:
     sample_images.select(fn=show_selected,
                          inputs=[input_source, sample_images],
                          outputs=[input_image])
+
+    sample_images.select(fn=select_from_sample,
+                         inputs=[left_source, right_source, active_side, sample_images],
+                         outputs=[left_image, right_image])
 
     input_source.change(fn=lambda src: gr.update(interactive=(src == 'Upload Image')),
                         inputs=[input_source],
@@ -525,6 +559,18 @@ with gr.Blocks(title=title) as demo:
     right_source.select(fn=update_compare_image,
                         inputs=[right_source, output_image],
                         outputs=[right_image])
+
+    left_source.select(fn=lambda: 'left',
+                        inputs=[],
+                        outputs=[active_side])
+
+    right_source.select(fn=lambda: 'right',
+                        inputs=[],
+                        outputs=[active_side])
+
+    result_images.select(fn=select_from_results,
+                         inputs=[left_source, right_source, active_side, result_images],
+                         outputs=[left_image, right_image])
 
     left_image.change(fn=update_image_slider,
                       inputs=[left_image, right_image],
