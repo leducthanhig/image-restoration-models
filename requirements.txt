@@ -11,3 +11,4 @@ tqdm
 pandas
 natsort
 gradio
+protobuf
