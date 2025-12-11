@@ -263,11 +263,18 @@ def show_selected(input_source, images, evt: gr.SelectData):
     return selected[0]
 
 
-def update_input_image(image, subtask, added_noise_state):
+def update_input_image(image, input_source, subtask, added_noise_state):
     if image is None:
         return (
             gr.update(interactive=False),
             gr.update(interactive=False),
+            False
+        )
+
+    if input_source == 'Upload Image':
+        return (
+            gr.update(interactive=True),
+            gr.update(interactive=True),
             False
         )
 
@@ -554,7 +561,7 @@ with gr.Blocks(title=title) as demo:
                                 outputs=[sigma_dropdown, sigma_slider, model_dropdown])
 
     input_image.change(fn=update_input_image,
-                        inputs=[input_image, subtask_dropdown, added_noise],
+                        inputs=[input_image, input_source, subtask_dropdown, added_noise],
                         outputs=[add_noise_btn, run_btn, added_noise])
 
     model_dropdown.change(update_patch_config,
