@@ -294,10 +294,10 @@ def run_model_inference(
         output_img /= np.maximum(weight_map, 1e-8)
 
         # Convert back to original dtype
-        if input_img.dtype == np.uint8:
-            output_img = np.clip(output_img * 255.0, 0, 255).round().astype(np.uint8)
-        elif input_img.dtype == np.uint16:
+        if input_img.dtype == np.uint16:
             output_img = np.clip(output_img * 65535.0, 0, 65535).round().astype(np.uint16)
+        else:
+            output_img = np.clip(output_img * 255.0, 0, 255).round().astype(np.uint8)
 
     inference_time_ms = (time.time() - start_time) * 1000
     return output_img, inference_time_ms
