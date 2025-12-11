@@ -66,8 +66,8 @@ def test_gaussian_denoising_gray_nonblind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'REDNet', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Gray Non-blind',
+                    'Task': 'Denoising',
+                    'Type': 'Gray Non-blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'REDNet',
@@ -102,8 +102,8 @@ def test_gaussian_denoising_gray_nonblind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'DnCNN', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Gray Non-blind',
+                    'Task': 'Denoising',
+                    'Type': 'Gray Non-blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'DnCNN',
@@ -139,8 +139,8 @@ def test_gaussian_denoising_gray_nonblind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Gray Non-blind',
+                    'Task': 'Denoising',
+                    'Type': 'Gray Non-blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'Restormer',
@@ -193,8 +193,8 @@ def test_gaussian_denoising_gray_blind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'DnCNN', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Gray Blind',
+                    'Task': 'Denoising',
+                    'Type': 'Gray Blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'DnCNN',
@@ -229,8 +229,8 @@ def test_gaussian_denoising_gray_blind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Gray Blind',
+                    'Task': 'Denoising',
+                    'Type': 'Gray Blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'Restormer',
@@ -285,8 +285,8 @@ def test_gaussian_denoising_color_nonblind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Color Non-blind',
+                    'Task': 'Denoising',
+                    'Type': 'Color Non-blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'Restormer',
@@ -322,8 +322,8 @@ def test_gaussian_denoising_color_nonblind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'MaIR', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Color Non-blind',
+                    'Task': 'Denoising',
+                    'Type': 'Color Non-blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'MaIR',
@@ -375,8 +375,8 @@ def test_gaussian_denoising_color_blind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'DnCNN', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Color Blind',
+                    'Task': 'Denoising',
+                    'Type': 'Color Blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'DnCNN',
@@ -411,8 +411,8 @@ def test_gaussian_denoising_color_blind(
                     save_result_image(pred, test_name, f"{dataset_name}_Sig{sigma}", 'Restormer', img_name)
 
                 results_table.append({
-                    'Task': 'Gaussian Denoising',
-                    'Type': 'Color Blind',
+                    'Task': 'Denoising',
+                    'Type': 'Color Blind Gaussian Noise',
                     'Dataset': dataset_name,
                     'Sigma': sigma,
                     'Model': 'Restormer',
@@ -457,8 +457,8 @@ def test_real_noise_denoising(models: list[Literal['Restormer', 'MaIR']] = ['Res
             img_idx += 1
 
         results_table.append({
-            'Task': 'Real Noise Denoising',
-            'Type': 'Real',
+            'Task': 'Denoising',
+            'Type': 'Real Noise',
             'Dataset': dataset_name,
             'Sigma': 'N/A',
             'Model': 'Restormer',
@@ -490,8 +490,8 @@ def test_real_noise_denoising(models: list[Literal['Restormer', 'MaIR']] = ['Res
             img_idx += 1
 
         results_table.append({
-            'Task': 'Real Noise Denoising',
-            'Type': 'Real',
+            'Task': 'Denoising',
+            'Type': 'Real Noise',
             'Dataset': dataset_name,
             'Sigma': 'N/A',
             'Model': 'MaIR',
@@ -531,11 +531,11 @@ def test_defocus_blur_deblurring():
         save_result_image(pred, test_name, dataset_name, 'Restormer', img_name)
 
     results_table.append({
-        'Task': 'Defocus Deblurring',
-        'Type': 'Single-image',
+        'Task': 'Deblurring',
+        'Type': 'Defocus',
         'Dataset': dataset_name,
         'Sigma': 'N/A',
-        'Model': 'Restormer',
+        'Model': 'Restormer (Single-image)',
         'Model_Params': model_params,
         'PSNR': np.mean(psnr_list),
         'SSIM': np.mean(ssim_list),
@@ -562,11 +562,11 @@ def test_defocus_blur_deblurring():
         save_result_image(pred, test_name, dataset_name, 'Restormer', img_name)
 
     results_table.append({
-        'Task': 'Defocus Deblurring',
-        'Type': 'Dual-pixel',
+        'Task': 'Deblurring',
+        'Type': 'Defocus',
         'Dataset': dataset_name,
         'Sigma': 'N/A',
-        'Model': 'Restormer',
+        'Model': 'Restormer (Dual-pixel)',
         'Model_Params': model_params,
         'PSNR': np.mean(psnr_list),
         'SSIM': np.mean(ssim_list),
@@ -592,9 +592,9 @@ def test_motion_blur_deblurring(
         # Load dataset
         loader = data_loaders.motion_blur_dataset_loader(dataset_name)
 
-        # Test DeblurGANv2 (fpn_inception)
+        # Test DeblurGANv2 (Inception)
         if 'DeblurGANv2 (Inception)' in models:
-            print(f"\nTesting DeblurGANv2 (fpn_inception) on {dataset_name}...")
+            print(f"\nTesting DeblurGANv2 (Inception) on {dataset_name}...")
             model = deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_inception.h5', device=device)
             model_params = get_model_total_parameters(model)
             test_name = 'Motion_Deblurring'
@@ -615,11 +615,11 @@ def test_motion_blur_deblurring(
                 save_result_image(pred, test_name, dataset_name, 'DeblurGANv2_fpn_inception', img_name)
 
             results_table.append({
-                'Task': 'Motion Deblurring',
+                'Task': 'Deblurring',
                 'Type': 'Motion',
                 'Dataset': dataset_name,
                 'Sigma': 'N/A',
-                'Model': 'DeblurGANv2 (fpn_inception)',
+                'Model': 'DeblurGANv2 (Inception)',
                 'Model_Params': model_params,
                 'PSNR': np.mean(psnr_list),
                 'SSIM': np.mean(ssim_list),
@@ -629,9 +629,9 @@ def test_motion_blur_deblurring(
                 'Std_Time_ms': np.std(time_list)
             })
 
-        # Test DeblurGANv2 (fpn_mobilenet)
+        # Test DeblurGANv2 (MobileNet)
         if 'DeblurGANv2 (MobileNet)' in models:
-            print(f"\nTesting DeblurGANv2 (fpn_mobilenet) on {dataset_name}...")
+            print(f"\nTesting DeblurGANv2 (MobileNet) on {dataset_name}...")
             model = deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_mobilenet.h5', device=device)
             model_params = get_model_total_parameters(model)
             test_name = 'Motion_Deblurring'
@@ -652,11 +652,11 @@ def test_motion_blur_deblurring(
                 save_result_image(pred, test_name, dataset_name, 'DeblurGANv2_fpn_mobilenet', img_name)
 
             results_table.append({
-                'Task': 'Motion Deblurring',
+                'Task': 'Deblurring',
                 'Type': 'Motion',
                 'Dataset': dataset_name,
                 'Sigma': 'N/A',
-                'Model': 'DeblurGANv2 (fpn_mobilenet)',
+                'Model': 'DeblurGANv2 (MobileNet)',
                 'Model_Params': model_params,
                 'PSNR': np.mean(psnr_list),
                 'SSIM': np.mean(ssim_list),
@@ -683,7 +683,7 @@ def test_motion_blur_deblurring(
                 save_result_image(pred, test_name, dataset_name, 'Restormer', img_name)
 
             results_table.append({
-                'Task': 'Motion Deblurring',
+                'Task': 'Deblurring',
                 'Type': 'Motion',
                 'Dataset': dataset_name,
                 'Sigma': 'N/A',
@@ -714,7 +714,7 @@ def test_motion_blur_deblurring(
                 save_result_image(pred, test_name, dataset_name, 'MaIR', img_name)
 
             results_table.append({
-                'Task': 'Motion Deblurring',
+                'Task': 'Deblurring',
                 'Type': 'Motion',
                 'Dataset': dataset_name,
                 'Sigma': 'N/A',
