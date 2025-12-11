@@ -128,11 +128,13 @@ def update_models(task, subtask, dataset, input_image, blind_noise=False):
         gray = dataset in ['Set12', 'BSD68']
 
     models = get_models(task_key, subtask_key, gray, blind_noise)
-    return gr.update(choices=models, value=models[0])
+    return (
+        gr.update(choices=models, value=models[0]),
+        gray
+    )
 
 
-def update_noisy_image(image, sigma):
-    gray = np.all(np.diff(image, axis=2) == 0)
+def update_noisy_image(image, sigma, gray):
     # with gray image, keep only one channel
     if gray:
         image = image[:, :, :1]
@@ -207,10 +209,9 @@ def update_patch_config(task, subtask, model_name):
     )
 
 
-def run_restoration(input_image, task, subtask, model_name, patch_size, patch_overlap, blind_noise, sigma, device,progress=gr.Progress()):
+def run_restoration(input_image, task, subtask, model_name, patch_size, patch_overlap, blind_noise, sigma, gray, device, progress=gr.Progress()):
     task_key = task.lower()
     subtask_key = subtask.lower()
-    gray = np.all(np.diff(input_image, axis=2) == 0)
     sigma_value = None if blind_noise or subtask_key == 'real' else sigma
     device = torch.device(device)
     model = get_model_instance(task_key, subtask_key, model_name, device, gray, sigma_value)
@@ -406,6 +407,8 @@ with gr.Blocks(title=title) as demo:
     active_side = gr.State('left')
     # state to remember whether gaussian noise was added to the input image
     added_noise = gr.State(False)
+    # state to remember whether the input image is grayscale
+    gray = gr.State(False)
 
 
     # Set up interactions
@@ -422,15 +425,17 @@ with gr.Blocks(title=title) as demo:
                             outputs=[sample_images])
 
     dataset_dropdown.change(update_models,
-                            inputs=[task_dropdown, subtask_dropdown, dataset_dropdown, input_image, blind_noise_checkbox],
-                            outputs=[model_dropdown])
+                            inputs=[task_dropdown, subtask_dropdown, dataset_dropdown,
+                                    input_image, blind_noise_checkbox],
+                            outputs=[model_dropdown, gray])
 
     input_image.change(update_models,
-                        inputs=[task_dropdown, subtask_dropdown, dataset_dropdown, input_image, blind_noise_checkbox],
-                        outputs=[model_dropdown])
+                       inputs=[task_dropdown, subtask_dropdown, dataset_dropdown,
+                               input_image, blind_noise_checkbox],
+                       outputs=[model_dropdown, gray])
 
     add_noise_btn.click(update_noisy_image,
-                        inputs=[input_image, sigma_slider],
+                        inputs=[input_image, sigma_slider, gray],
                         outputs=[input_image, added_noise])
 
     sample_images.select(show_selected,
@@ -448,7 +453,7 @@ with gr.Blocks(title=title) as demo:
     blind_noise_checkbox.change(lambda blind, task, subtask, dataset, input_image: (
                                     gr.update(interactive=not blind),
                                     gr.update(interactive=blind),
-                                    update_models(task, subtask, dataset, input_image, blind)
+                                    update_models(task, subtask, dataset, input_image, blind)[0]
                                 ),
                                 inputs=[blind_noise_checkbox, task_dropdown, subtask_dropdown,
                                         dataset_dropdown, input_image],
@@ -465,7 +470,7 @@ with gr.Blocks(title=title) as demo:
     run_btn.click(run_restoration,
                   inputs=[input_image, task_dropdown, subtask_dropdown,
                           model_dropdown, patch_size_slider, patch_overlap_slider,
-                          blind_noise_checkbox, sigma_dropdown, device_dropdown],
+                          blind_noise_checkbox, sigma_dropdown, gray, device_dropdown],
                   outputs=[output_image])
 
     output_image.change(update_results,
