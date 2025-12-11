@@ -109,7 +109,7 @@ def get_patch_config(task, subtask, model_name) -> dict | None:
     return config
 
 
-def get_model_instance(task, subtask, model_name, gray=False, sigma=None) -> torch.nn.Module:
+def get_model_instance(task, subtask, model_name, device, gray=False, sigma=None) -> torch.nn.Module:
     model_key = model_name.split(' ')[0]
     if model_key == 'REDNet':
         if task == 'denoising' and subtask == 'gaussian' and sigma is not None:
@@ -153,33 +153,33 @@ def get_model_instance(task, subtask, model_name, gray=False, sigma=None) -> tor
     raise ValueError('No model instance found for current configuration.')
 
 
-def get_model_prediction(model, input_image, patch_size, patch_overlap, progress_bar=None):
+def get_model_prediction(model, input_image, patch_size, patch_overlap, device, progress_bar=None):
     if isinstance(model, (FPNInception, FPNMobileNet)):
-        restored_image, _ = run_model_inference(model,
-                                                input_image,
-                                                device,
-                                                normalize=deblurganv2.normalize,
-                                                pad=deblurganv2.pad,
-                                                postprocess=deblurganv2.postprocess,
-                                                patch_size=patch_size,
-                                                patch_overlap=patch_overlap,
-                                                progress_bar=progress_bar)
+        restored_image, inference_time = run_model_inference(model,
+                                                            input_image,
+                                                            device,
+                                                            normalize=deblurganv2.normalize,
+                                                            pad=deblurganv2.pad,
+                                                            postprocess=deblurganv2.postprocess,
+                                                            patch_size=patch_size,
+                                                            patch_overlap=patch_overlap,
+                                                            progress_bar=progress_bar)
     elif isinstance(model, (Restormer, MaIR, MaIRUNet)):
-        restored_image, _ = run_model_inference(model,
-                                                input_image,
-                                                device,
-                                                pad=pad,
-                                                patch_size=patch_size,
-                                                patch_overlap=patch_overlap,
-                                                progress_bar=progress_bar)
+        restored_image, inference_time = run_model_inference(model,
+                                                            input_image,
+                                                            device,
+                                                            pad=pad,
+                                                            patch_size=patch_size,
+                                                            patch_overlap=patch_overlap,
+                                                            progress_bar=progress_bar)
     else:
-        restored_image, _ = run_model_inference(model,
-                                                input_image,
-                                                device,
-                                                patch_size=patch_size,
-                                                patch_overlap=patch_overlap,
-                                                progress_bar=progress_bar)
-    return restored_image
+        restored_image, inference_time = run_model_inference(model,
+                                                            input_image,
+                                                            device,
+                                                            patch_size=patch_size,
+                                                            patch_overlap=patch_overlap,
+                                                            progress_bar=progress_bar)
+    return restored_image, inference_time
 
 
 def update_subtask(task):
@@ -307,18 +307,19 @@ def update_patch_config(task, subtask, model_name):
     )
 
 
-def run_restoration(input_image, task, subtask, model_name, patch_size, patch_overlap, blind_noise, sigma, progress=gr.Progress()):
+def run_restoration(input_image, task, subtask, model_name, patch_size, patch_overlap, blind_noise, sigma, device,progress=gr.Progress()):
     task_key = task.lower()
     subtask_key = subtask.lower()
     gray = np.all(np.diff(input_image, axis=2) == 0)
     sigma_value = None if blind_noise or subtask_key == 'real' else sigma
-    model = get_model_instance(task_key, subtask_key, model_name, gray, sigma_value)
+    device = torch.device(device)
+    model = get_model_instance(task_key, subtask_key, model_name, device, gray, sigma_value)
     if gray:
         input_image = input_image[:, :, :1]
-        restored_image = get_model_prediction(model, input_image, patch_size, patch_overlap, progress)
+        restored_image, _ = get_model_prediction(model, input_image, patch_size, patch_overlap, device, progress)
         restored_image = np.repeat(restored_image, 3, axis=2)
     else:
-        restored_image = get_model_prediction(model, input_image, patch_size, patch_overlap, progress)
+        restored_image, _ = get_model_prediction(model, input_image, patch_size, patch_overlap, device, progress)
     return restored_image
 
 
@@ -383,8 +384,6 @@ initial_images = update_samples(initial_tasks[0], initial_subtasks[0], initial_d
 initial_models = get_models(initial_tasks[0], initial_subtasks[0], initial_datasets[0] in ['Set12', 'BSD68'])
 initial_patch_config = get_patch_config(initial_tasks[0], initial_subtasks[0], initial_models[0])
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 with gr.Blocks(title=title) as demo:
     gr.HTML(f"<center><h1>{title}</h1></center><br>")
 
@@ -437,10 +436,16 @@ with gr.Blocks(title=title) as demo:
 
         with gr.Column():
             with gr.Group():
-                model_dropdown = gr.Dropdown(choices=initial_models,
-                                            label='Model',
-                                            interactive=True,
-                                            value=initial_models[0])
+                with gr.Row():
+                    model_dropdown = gr.Dropdown(choices=initial_models,
+                                                label='Model',
+                                                interactive=True,
+                                                value=initial_models[0])
+                    device_dropdown = gr.Dropdown(choices=['cuda', 'cpu'],
+                                                  label='Device',
+                                                  interactive=True,
+                                                  value='cuda' if torch.cuda.is_available() else 'cpu')
+
                 patch_size_slider = gr.Slider(minimum=128,
                                             maximum=2048,
                                             step=32,
@@ -559,7 +564,7 @@ with gr.Blocks(title=title) as demo:
     run_btn.click(run_restoration,
                   inputs=[input_image, task_dropdown, subtask_dropdown,
                           model_dropdown, patch_size_slider, patch_overlap_slider,
-                          blind_noise_checkbox, sigma_dropdown],
+                          blind_noise_checkbox, sigma_dropdown, device_dropdown],
                   outputs=[output_image])
 
     output_image.change(fn=update_results,
