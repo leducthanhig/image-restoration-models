@@ -8,7 +8,6 @@ from PIL import Image
 import scipy.io as sio
 import numpy as np
 import torch
-import cv2
 
 import deblurganv2
 import dncnn
@@ -45,7 +44,7 @@ def get_task_data():
     return task_data
 
 
-def get_models(task, subtask, dataset, blind_noise=False):
+def get_models(task, subtask, gray=False, blind_noise=False):
     model_dict = {
         'deblurring': {
             'defocus': ['Restormer'],
@@ -59,7 +58,6 @@ def get_models(task, subtask, dataset, blind_noise=False):
     models = model_dict.get(task, {}).get(subtask, [])
 
     if subtask == 'gaussian':
-        gray = dataset in ['Set12', 'BSD68']
         if gray:
             if not blind_noise:
                 if 'MaIR' in models:
@@ -84,7 +82,7 @@ def get_models(task, subtask, dataset, blind_noise=False):
     return models
 
 
-def get_patch_config(task, subtask, model_name):
+def get_patch_config(task, subtask, model_name) -> dict | None:
     task_key = task.lower()
     subtask_key = subtask.lower()
     model_key = model_name.split(' ')[0]
@@ -111,11 +109,8 @@ def get_patch_config(task, subtask, model_name):
     return config
 
 
-def get_model_instance(task, subtask, dataset, model_name, sigma=None):
+def get_model_instance(task, subtask, model_name, gray=False, sigma=None) -> torch.nn.Module:
     model_key = model_name.split(' ')[0]
-
-    gray = dataset in ['Set12', 'BSD68']
-
     if model_key == 'REDNet':
         if task == 'denoising' and subtask == 'gaussian' and sigma is not None:
             return rednet.get_model(f'{ROOT_WEIGHTS_DIR}/REDNet/{sigma}.pt', device)
@@ -155,7 +150,7 @@ def get_model_instance(task, subtask, dataset, model_name, sigma=None):
         if task == 'deblurring' and subtask == 'motion':
             return mair.get_model('src/mair/realDenoising/options/test_MaIR_MotionDeblur.yml')
 
-    return None
+    raise ValueError('No model instance found for current configuration.')
 
 
 def get_model_prediction(model, input_image, patch_size, patch_overlap, progress_bar=None):
@@ -231,16 +226,31 @@ def update_samples(task, subtask, dataset, n_samples=10):
     return map(Image.open, image_files)
 
 
-def update_models(task, subtask, dataset, blind_noise=False):
+def update_models(task, subtask, dataset, input_image, blind_noise=False):
     task_key = task.lower()
     subtask_key = subtask.lower()
-    models = get_models(task_key, subtask_key, dataset, blind_noise)
+    if input_image is not None:
+        gray = np.all(np.diff(input_image, axis=2) == 0)
+    else:
+        gray = dataset in ['Set12', 'BSD68']
+
+    models = get_models(task_key, subtask_key, gray, blind_noise)
     return gr.update(choices=models, value=models[0])
 
 
 def update_noisy_image(image, sigma):
+    gray = np.all(np.diff(image, axis=2) == 0)
+    # with gray image, keep only one channel
+    if gray:
+        image = image[:, :, :1]
+
     noisy_img = add_gaussian_noise(image, sigma)
     noisy_img = np.clip(noisy_img * 255, 0, 255).astype(np.uint8)
+
+    # repeat channels to make it 3-channel image
+    if gray:
+        noisy_img = np.repeat(noisy_img, 3, axis=2)
+
     # return noisy image and set the added-noise flag (state) to True
     return Image.fromarray(noisy_img), True
 
@@ -297,13 +307,14 @@ def update_patch_config(task, subtask, model_name):
     )
 
 
-def run_restoration(input_image, task, subtask, dataset, model_name, patch_size, patch_overlap, blind_noise, sigma, progress=gr.Progress()):
+def run_restoration(input_image, task, subtask, model_name, patch_size, patch_overlap, blind_noise, sigma, progress=gr.Progress()):
     task_key = task.lower()
     subtask_key = subtask.lower()
-    sigma_value = None if blind_noise else sigma
-    model = get_model_instance(task_key, subtask_key, dataset, model_name, sigma_value)
-    if dataset in ['Set12', 'BSD68']:
-        input_image = cv2.cvtColor(input_image, cv2.COLOR_RGB2GRAY)[..., None]
+    gray = np.all(np.diff(input_image, axis=2) == 0)
+    sigma_value = None if blind_noise or subtask_key == 'real' else sigma
+    model = get_model_instance(task_key, subtask_key, model_name, gray, sigma_value)
+    if gray:
+        input_image = input_image[:, :, :1]
         restored_image = get_model_prediction(model, input_image, patch_size, patch_overlap, progress)
         restored_image = np.repeat(restored_image, 3, axis=2)
     else:
@@ -369,7 +380,7 @@ initial_tasks = list(task_data.keys())
 initial_subtasks = list(task_data[initial_tasks[0]].keys())
 initial_datasets = task_data[initial_tasks[0]][initial_subtasks[0]]
 initial_images = update_samples(initial_tasks[0], initial_subtasks[0], initial_datasets[0])
-initial_models = get_models(initial_tasks[0], initial_subtasks[0], initial_datasets[0])
+initial_models = get_models(initial_tasks[0], initial_subtasks[0], initial_datasets[0] in ['Set12', 'BSD68'])
 initial_patch_config = get_patch_config(initial_tasks[0], initial_subtasks[0], initial_models[0])
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -506,8 +517,12 @@ with gr.Blocks(title=title) as demo:
                             outputs=[sample_images])
 
     dataset_dropdown.change(update_models,
-                            inputs=[task_dropdown, subtask_dropdown, dataset_dropdown, blind_noise_checkbox],
+                            inputs=[task_dropdown, subtask_dropdown, dataset_dropdown, input_image, blind_noise_checkbox],
                             outputs=[model_dropdown])
+
+    input_image.change(update_models,
+                        inputs=[task_dropdown, subtask_dropdown, dataset_dropdown, input_image, blind_noise_checkbox],
+                        outputs=[model_dropdown])
 
     add_noise_btn.click(update_noisy_image,
                         inputs=[input_image, sigma_slider],
@@ -525,12 +540,12 @@ with gr.Blocks(title=title) as demo:
                         inputs=[input_source],
                         outputs=[input_image])
 
-    blind_noise_checkbox.change(fn=lambda blind, task, subtask, dataset: (
+    blind_noise_checkbox.change(fn=lambda blind, task, subtask, dataset, input_image: (
                                     gr.update(interactive=not blind),
                                     gr.update(interactive=blind),
-                                    update_models(task, subtask, dataset, blind)
+                                    update_models(task, subtask, dataset, input_image, blind)
                                 ),
-                                inputs=[blind_noise_checkbox, task_dropdown, subtask_dropdown, dataset_dropdown],
+                                inputs=[blind_noise_checkbox, task_dropdown, subtask_dropdown, dataset_dropdown, input_image],
                                 outputs=[sigma_dropdown, sigma_slider, model_dropdown])
 
     input_image.change(fn=update_input_image,
@@ -542,7 +557,7 @@ with gr.Blocks(title=title) as demo:
                           outputs=[patch_size_slider, patch_overlap_slider])
 
     run_btn.click(run_restoration,
-                  inputs=[input_image, task_dropdown, subtask_dropdown, dataset_dropdown,
+                  inputs=[input_image, task_dropdown, subtask_dropdown,
                           model_dropdown, patch_size_slider, patch_overlap_slider,
                           blind_noise_checkbox, sigma_dropdown],
                   outputs=[output_image])
