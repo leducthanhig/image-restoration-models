@@ -9,18 +9,11 @@ import scipy.io as sio
 import numpy as np
 import torch
 
-import deblurganv2
-import dncnn
-import mair
-import rednet
-import restormer
-from deblurganv2.models.fpn_inception import FPNInception
-from deblurganv2.models.fpn_mobilenet import FPNMobileNet
-from restormer import Restormer
-from mair.basicsr.archs.mair_arch import MaIR
-from mair.realDenoising.basicsr.models.archs.mairunet_arch import MaIRUNet
-from utils import add_gaussian_noise, pad, run_model_inference
-from configs import ROOT_DATASET_DIR, PATCH_CONFIG, ROOT_WEIGHTS_DIR
+from utils import (add_gaussian_noise,
+                   get_patch_config,
+                   get_model_instance,
+                   get_model_prediction)
+from configs import ROOT_DATASET_DIR
 
 
 def get_task_data():
@@ -80,106 +73,6 @@ def get_models(task, subtask, gray=False, blind_noise=False):
                     models.remove('MaIR')
 
     return models
-
-
-def get_patch_config(task, subtask, model_name) -> dict | None:
-    task_key = task.lower()
-    subtask_key = subtask.lower()
-    model_key = model_name.split(' ')[0]
-    config = PATCH_CONFIG.get(model_key, None)
-    if isinstance(config, list):
-        if model_key == 'DeblurGANv2':
-            if 'Inception' in model_name:
-                config = config[0]
-            else:
-                config = config[1]
-        elif model_key == 'MaIR':
-            if subtask_key == 'gaussian':
-                config = config[0]
-            else:
-                config = config[1]
-        elif model_key == 'Restormer':
-            if task_key == 'denoising':
-                config = config[0]
-            else:
-                config = config[1]
-        else:
-            config = config[0]
-
-    return config
-
-
-def get_model_instance(task, subtask, model_name, device, gray=False, sigma=None) -> torch.nn.Module:
-    model_key = model_name.split(' ')[0]
-    if model_key == 'REDNet':
-        if task == 'denoising' and subtask == 'gaussian' and sigma is not None:
-            return rednet.get_model(f'{ROOT_WEIGHTS_DIR}/REDNet/{sigma}.pt', device)
-    elif model_key == 'DnCNN':
-        if task == 'denoising' and subtask == 'gaussian':
-            if gray:
-                if sigma is not None:
-                    return dncnn.get_model(f'{ROOT_WEIGHTS_DIR}/DnCNN/dncnn_{sigma}.pth', 1, 17, device)
-                return dncnn.get_model(f'{ROOT_WEIGHTS_DIR}/DnCNN/dncnn_gray_blind.pth', 1, 20, device)
-            if sigma is None:
-                return dncnn.get_model(f'{ROOT_WEIGHTS_DIR}/DnCNN/dncnn_color_blind.pth', 3, 20, device)
-    elif model_key == 'DeblurGANv2':
-        if task == 'deblurring' and subtask == 'motion':
-            if 'Inception' in model_name:
-                return deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_inception.h5', device)
-            if 'MobileNet' in model_name:
-                return deblurganv2.get_model(f'{ROOT_WEIGHTS_DIR}/DeblurGANv2/fpn_mobilenet.h5', device)
-    elif model_key == 'Restormer':
-        if task == 'denoising':
-            if subtask == 'gaussian':
-                if sigma is not None:
-                    return restormer.get_model(f"src/restormer/options/Gaussian{'Gray' if gray else 'Color'}Denoising_RestormerSigma{sigma}.yml", device)
-                return restormer.get_model(f"src/restormer/options/Gaussian{'Gray' if gray else 'Color'}Denoising_Restormer.yml", device)
-            if subtask == 'real':
-                return restormer.get_model('src/restormer/options/RealDenoising_Restormer.yml', device)
-        if task == 'deblurring':
-            if subtask == 'defocus':
-                return restormer.get_model('src/restormer/options/DefocusDeblur_Single_8bit_Restormer.yml', device)
-            if subtask == 'motion':
-                return restormer.get_model('src/restormer/options/Deblurring_Restormer.yml', device)
-    elif model_key == 'MaIR':
-        if task == 'denoising':
-            if subtask == 'gaussian' and not gray and sigma is not None:
-                return mair.get_model(f'src/mair/options/test_MaIR_CDN_s{sigma}.yml')
-            if subtask == 'real':
-                return mair.get_model('src/mair/realDenoising/options/test_MaIR_RealDN.yml')
-        if task == 'deblurring' and subtask == 'motion':
-            return mair.get_model('src/mair/realDenoising/options/test_MaIR_MotionDeblur.yml')
-
-    raise ValueError('No model instance found for current configuration.')
-
-
-def get_model_prediction(model, input_image, patch_size, patch_overlap, device, progress_bar=None):
-    if isinstance(model, (FPNInception, FPNMobileNet)):
-        restored_image, inference_time = run_model_inference(model,
-                                                            input_image,
-                                                            device,
-                                                            normalize=deblurganv2.normalize,
-                                                            pad=deblurganv2.pad,
-                                                            postprocess=deblurganv2.postprocess,
-                                                            patch_size=patch_size,
-                                                            patch_overlap=patch_overlap,
-                                                            progress_bar=progress_bar)
-    elif isinstance(model, (Restormer, MaIR, MaIRUNet)):
-        restored_image, inference_time = run_model_inference(model,
-                                                            input_image,
-                                                            device,
-                                                            pad=pad,
-                                                            patch_size=patch_size,
-                                                            patch_overlap=patch_overlap,
-                                                            progress_bar=progress_bar)
-    else:
-        restored_image, inference_time = run_model_inference(model,
-                                                            input_image,
-                                                            device,
-                                                            patch_size=patch_size,
-                                                            patch_overlap=patch_overlap,
-                                                            progress_bar=progress_bar)
-    return restored_image, inference_time
 
 
 def update_subtask(task):
@@ -323,10 +216,10 @@ def run_restoration(input_image, task, subtask, model_name, patch_size, patch_ov
     model = get_model_instance(task_key, subtask_key, model_name, device, gray, sigma_value)
     if gray:
         input_image = input_image[:, :, :1]
-        restored_image, _ = get_model_prediction(model, input_image, patch_size, patch_overlap, device, progress)
+        restored_image, _ = get_model_prediction(model, input_image, device, patch_size, patch_overlap, progress_bar=progress)
         restored_image = np.repeat(restored_image, 3, axis=2)
     else:
-        restored_image, _ = get_model_prediction(model, input_image, patch_size, patch_overlap, device, progress)
+        restored_image, _ = get_model_prediction(model, input_image, device, patch_size, patch_overlap, progress_bar=progress)
     return restored_image
 
 
@@ -488,8 +381,8 @@ with gr.Blocks(title=title) as demo:
                                                     'Sample Images', 'Result Images'],
                                             label='Left Source',
                                             value='Input Image',
-                                            info=('Re-select this radio to activate this side,'
-                                                  'then pick an image from the Sample/Result Gallery.'),
+                                            info=('After picking an image from the Sample/Result Gallery at the other side, '
+                                                  're-select this radio to activate this side.'),
                                             interactive=True)
 
                     left_image = gr.Image(label='Left Image', interactive=False)
@@ -500,8 +393,8 @@ with gr.Blocks(title=title) as demo:
                                                      'Sample Images', 'Result Images'],
                                             label='Right Source',
                                             value='Restored Image',
-                                            info=('Re-select this radio to activate this side,'
-                                                  'then pick an image from the Sample/Result Gallery.'),
+                                            info=('After picking an image from the Sample/Result Gallery at the other side, '
+                                                  're-select this radio to activate this side.'),
                                             interactive=True)
 
                     right_image = gr.Image(label='Right Image', interactive=False)
@@ -540,29 +433,30 @@ with gr.Blocks(title=title) as demo:
                         inputs=[input_image, sigma_slider],
                         outputs=[input_image, added_noise])
 
-    sample_images.select(fn=show_selected,
+    sample_images.select(show_selected,
                          inputs=[input_source, sample_images],
                          outputs=[input_image])
 
-    sample_images.select(fn=select_from_sample,
+    sample_images.select(select_from_sample,
                          inputs=[left_source, right_source, active_side, sample_images],
                          outputs=[left_image, right_image])
 
-    input_source.change(fn=lambda src: gr.update(interactive=(src == 'Upload Image')),
+    input_source.change(lambda src: gr.update(interactive=(src == 'Upload Image')),
                         inputs=[input_source],
                         outputs=[input_image])
 
-    blind_noise_checkbox.change(fn=lambda blind, task, subtask, dataset, input_image: (
+    blind_noise_checkbox.change(lambda blind, task, subtask, dataset, input_image: (
                                     gr.update(interactive=not blind),
                                     gr.update(interactive=blind),
                                     update_models(task, subtask, dataset, input_image, blind)
                                 ),
-                                inputs=[blind_noise_checkbox, task_dropdown, subtask_dropdown, dataset_dropdown, input_image],
+                                inputs=[blind_noise_checkbox, task_dropdown, subtask_dropdown,
+                                        dataset_dropdown, input_image],
                                 outputs=[sigma_dropdown, sigma_slider, model_dropdown])
 
-    input_image.change(fn=update_input_image,
-                        inputs=[input_image, input_source, subtask_dropdown, added_noise],
-                        outputs=[add_noise_btn, run_btn, added_noise])
+    input_image.change(update_input_image,
+                       inputs=[input_image, input_source, subtask_dropdown, added_noise],
+                       outputs=[add_noise_btn, run_btn, added_noise])
 
     model_dropdown.change(update_patch_config,
                           inputs=[task_dropdown, subtask_dropdown, model_dropdown],
@@ -574,40 +468,40 @@ with gr.Blocks(title=title) as demo:
                           blind_noise_checkbox, sigma_dropdown, device_dropdown],
                   outputs=[output_image])
 
-    output_image.change(fn=update_results,
+    output_image.change(update_results,
                         inputs=[result_images, input_image, output_image,
                                 left_source, right_source],
                         outputs=[result_images, left_image, right_image])
 
-    left_source.select(fn=update_compare_image,
+    left_source.select(update_compare_image,
                        inputs=[left_source, input_image],
                        outputs=[left_image])
 
-    right_source.select(fn=update_compare_image,
+    right_source.select(update_compare_image,
                         inputs=[right_source, output_image],
                         outputs=[right_image])
 
-    left_source.select(fn=lambda: 'left',
+    left_source.select(lambda: 'left',
+                       inputs=[],
+                       outputs=[active_side])
+
+    right_source.select(lambda: 'right',
                         inputs=[],
                         outputs=[active_side])
 
-    right_source.select(fn=lambda: 'right',
-                        inputs=[],
-                        outputs=[active_side])
-
-    result_images.select(fn=select_from_results,
+    result_images.select(select_from_results,
                          inputs=[left_source, right_source, active_side, result_images],
                          outputs=[left_image, right_image])
 
-    left_image.change(fn=update_image_slider,
+    left_image.change(update_image_slider,
                       inputs=[left_image, right_image],
                       outputs=[image_slider])
 
-    right_image.change(fn=update_image_slider,
+    right_image.change(update_image_slider,
                        inputs=[left_image, right_image],
                        outputs=[image_slider])
 
-    swap_btn.click(fn=lambda imgs: imgs[::-1],
+    swap_btn.click(lambda imgs: imgs[::-1],
                    inputs=[image_slider],
                    outputs=[image_slider])
 
