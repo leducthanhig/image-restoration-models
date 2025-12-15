@@ -157,10 +157,16 @@ def calculate_metrics(pred: np.ndarray, target: np.ndarray, data_range: int | fl
 
 
 def normalize(img: np.ndarray):
-    if img.dtype == np.uint8:
-        img_normed = img.astype(np.float32) / 255.0
-    elif img.dtype == np.uint16:
+    if img.dtype == np.uint16:
         img_normed = img.astype(np.float32) / 65535.0
+    elif img.dtype == np.uint8:
+        img_normed = img.astype(np.float32) / 255.0
+    else:
+        max_val = np.max(img)
+        if max_val > 1.0:
+            img_normed = img.astype(np.float32) / max_val
+        else:
+            img_normed = img.astype(np.float32)
 
     return img_normed.astype(np.float32)
 
@@ -436,8 +442,13 @@ def run_model_inference(
         # Convert back to original dtype
         if input_img.dtype == np.uint16:
             output_img = np.clip(output_img * 65535.0, 0, 65535).round().astype(np.uint16)
-        else:
+        elif input_img.dtype == np.uint8:
             output_img = np.clip(output_img * 255.0, 0, 255).round().astype(np.uint8)
+        else:
+            min_val = np.min(input_img)
+            max_val = np.max(input_img)
+            output_img = np.clip(output_img * max_val, min_val, max_val).astype(input_img.dtype)
+
 
     inference_time_ms = (time.time() - start_time) * 1000
     return output_img, inference_time_ms
