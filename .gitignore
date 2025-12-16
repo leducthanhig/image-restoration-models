@@ -1,6 +1,6 @@
 __pycache__
 venv
-tmp
+tmp*
 results
 test
 *.csv
@@ -8,3 +8,5 @@ test
 *.pth
 *.pt
 *.h5
+*.txt
+!requirements.txt
