@@ -1,10 +1,11 @@
 __pycache__
 venv
 tmp*
-results
+results*
 test
 *.csv
 *.tar
+*.zip
 *.pth
 *.pt
 *.h5

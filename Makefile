@@ -5,7 +5,7 @@ install-packages:
 		https://github.com/state-spaces/mamba/releases/download/v2.2.5/mamba_ssm-2.2.5+cu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
 
 download-datasets:
-	sh scripts/download_datasets.sh
+	./scripts/download_datasets.sh
 
 download-weights:
-	sh scripts/download_weights.sh
+	./scripts/download_weights.sh
