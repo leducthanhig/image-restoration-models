@@ -37,7 +37,7 @@ PATCH_CONFIG = {
             'patch_overlap': 32
         },
         {
-            'patch_size': 800,
+            'patch_size': 384,
             'patch_overlap': 128
         }
     ]
