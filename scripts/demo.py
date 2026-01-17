@@ -27,7 +27,11 @@ def get_task_data():
                 subtask_dir = os.path.join(task_dir, subtask)
                 if os.path.isdir(subtask_dir):
                     datasets = []
-                    for dataset in os.listdir(os.path.join(subtask_dir, 'test')):
+                    data_dir = os.path.join(subtask_dir, 'test')
+                    if not os.path.exists(data_dir):
+                        subtasks[subtask] = []
+                        continue
+                    for dataset in os.listdir(data_dir):
                         datasets.append(dataset)
 
                     subtasks[subtask] = datasets
@@ -87,12 +91,15 @@ def update_dataset(task, subtask):
     subtask_key = subtask.lower()
     choices = task_data.get(task_key, {}).get(subtask_key, [])
     return (
-        gr.update(choices=choices, value=choices[0]),
+        gr.update(choices=choices, value=choices[0] if choices else None),
         gr.update(interactive=(subtask_key == 'gaussian'))
     )
 
 
 def update_samples(task, subtask, dataset, n_samples=10):
+    if not dataset:
+        return None
+
     task_key = task.lower()
     subtask_key = subtask.lower()
 
@@ -281,8 +288,8 @@ task_data = get_task_data()
 initial_tasks = list(task_data.keys())
 initial_subtasks = list(task_data[initial_tasks[0]].keys())
 initial_datasets = task_data[initial_tasks[0]][initial_subtasks[0]]
-initial_images = update_samples(initial_tasks[0], initial_subtasks[0], initial_datasets[0])
-initial_models = get_models(initial_tasks[0], initial_subtasks[0], initial_datasets[0] in ['Set12', 'BSD68'])
+initial_images = update_samples(initial_tasks[0], initial_subtasks[0], initial_datasets[0]) if initial_datasets else None
+initial_models = get_models(initial_tasks[0], initial_subtasks[0], (initial_datasets[0] in ['Set12', 'BSD68']) if initial_datasets else False)
 initial_patch_config = get_patch_config(initial_tasks[0], initial_subtasks[0], initial_models[0])
 
 with gr.Blocks(title=title) as demo:
@@ -302,7 +309,7 @@ with gr.Blocks(title=title) as demo:
             dataset_dropdown = gr.Dropdown(choices=initial_datasets,
                                             label='Dataset',
                                             interactive=True,
-                                            value=initial_datasets[0])
+                                            value=initial_datasets[0] if initial_datasets else None)
 
         sample_images = gr.Gallery(value=initial_images, label='Sample Images', columns=5, format='png')
 
@@ -423,6 +430,11 @@ with gr.Blocks(title=title) as demo:
     dataset_dropdown.change(update_samples,
                             inputs=[task_dropdown, subtask_dropdown, dataset_dropdown],
                             outputs=[sample_images])
+
+    subtask_dropdown.change(update_models,
+                            inputs=[task_dropdown, subtask_dropdown, dataset_dropdown,
+                                    input_image, blind_noise_checkbox],
+                            outputs=[model_dropdown, gray])
 
     dataset_dropdown.change(update_models,
                             inputs=[task_dropdown, subtask_dropdown, dataset_dropdown,

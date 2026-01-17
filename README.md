@@ -44,6 +44,8 @@ make download-weights
 
 ## Download Datasets
 
+This is only required for running the full test suite or if you want to run the demo app with these datasets.
+
 ```bash
 # ~2 GB
 make download-datasets
@@ -51,9 +53,23 @@ make download-datasets
 
 # Run Tests
 
+Full test suite:
+
 ```bash
 python scripts/tests.py
 ```
+
+This will run tests for all models and tasks on the full datasets. All images and results are stored in the `results/` directory. The test configurations are detailed below.
+
+# Run quick tests
+
+Small-scale tests for demo purposes:
+
+```bash
+python scripts/test_demo.py
+```
+
+This will run tests for all models and tasks on a single image from representative datasets. All images and results are stored in the `demo/` directory.
 
 ## Test Configurations
 
