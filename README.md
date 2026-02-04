@@ -11,7 +11,7 @@ Furthermore, there is a Gradio-based web demo available for interactive testing 
 
 - Python 3.11+
 - GNU Make (optional, for downloading weights and datasets)
-- CUDA-capable GPU (optional, for faster inference)
+- CUDA-capable GPU (optional but recommended for faster inference and compatibility with pre-trained weights)
 
 # Set up
 
@@ -42,7 +42,7 @@ Note:
 make download-weights
 ```
 
-## Download Datasets
+## Download Datasets (Optional)
 
 This is only required for running the full test suite or if you want to run the demo app with these datasets.
 
@@ -53,7 +53,7 @@ make download-datasets
 
 # Run Tests
 
-Full test suite:
+## Full test suite
 
 ```bash
 python scripts/tests.py
@@ -61,7 +61,7 @@ python scripts/tests.py
 
 This will run tests for all models and tasks on the full datasets. All images and results are stored in the `results/` directory. The test configurations are detailed below.
 
-# Run quick tests
+## Quick tests
 
 Small-scale tests for demo purposes:
 
@@ -122,6 +122,30 @@ To run the Gradio-based web demo for interactive testing of the models:
 ```bash
 gradio scripts/demo.py
 ```
+
+# Test Results
+
+## Denoising
+
+![test_results_denoising_table](demo/test_results_denoising_table.png)
+
+## Deblurring
+
+![test_results_deblurring_table](demo/test_results_deblurring_table.png)
+
+Note:
+- Avg. time: Average inference time per image (in seconds) on an NVIDIA Tesla T4 GPU.
+- GFLOPs: Number of floating-point operations (in billions) for processing a 256x256 image.
+
+# Visualization
+
+## Denoising
+
+![visualization_denoising_figure](demo/visualization_denoising_figure.png)
+
+## Deblurring
+
+![visualization_deblurring_figure](demo/visualization_deblurring_figure.png)
 
 # Credits
 
